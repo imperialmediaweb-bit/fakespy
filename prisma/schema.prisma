@@ -1,0 +1,230 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum Plan {
+  FREE
+  PRO
+  AGENCY
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  TRIALING
+  INCOMPLETE
+  INCOMPLETE_EXPIRED
+  UNPAID
+}
+
+enum AnalysisStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum GenerationType {
+  FACEBOOK_AD
+  GOOGLE_AD
+  VIDEO_SCRIPT
+  HOOK
+  CTA
+  FULL_CAMPAIGN
+}
+
+enum ExportType {
+  JSON
+  PDF
+}
+
+model User {
+  id              String    @id @default(uuid())
+  name            String
+  email           String    @unique
+  passwordHash    String
+  role            Role      @default(USER)
+  emailVerified   Boolean   @default(false)
+  emailVerifyToken String?
+  resetToken      String?
+  resetTokenExpiry DateTime?
+  refreshToken    String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  subscription    Subscription?
+  usage           Usage[]
+  projects        Project[]
+  analyses        Analysis[]
+  adGenerations   AdGeneration[]
+  exports         Export[]
+  apiKeySettings  ApiKeySetting[]
+  auditLogs       AuditLog[]
+
+  @@map("users")
+}
+
+model Subscription {
+  id                  String             @id @default(uuid())
+  userId              String             @unique
+  plan                Plan               @default(FREE)
+  status              SubscriptionStatus @default(ACTIVE)
+  stripeCustomerId    String?
+  stripeSubscriptionId String?
+  currentPeriodStart  DateTime?
+  currentPeriodEnd    DateTime?
+  cancelAtPeriodEnd   Boolean            @default(false)
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("subscriptions")
+}
+
+model Usage {
+  id              String   @id @default(uuid())
+  userId          String
+  monthKey        String   // Format: YYYY-MM
+  analysesUsed    Int      @default(0)
+  generationsUsed Int      @default(0)
+  exportsUsed     Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, monthKey])
+  @@map("usages")
+}
+
+model Project {
+  id                 String   @id @default(uuid())
+  userId             String
+  title              String
+  brandName          String
+  niche              String?
+  location           String?
+  targetAudience     String?
+  productDescription String?
+  competitors        String[] @default([])
+  inputData          Json?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  analyses      Analysis[]
+  adGenerations AdGeneration[]
+  exports       Export[]
+
+  @@index([userId])
+  @@map("projects")
+}
+
+model Analysis {
+  id              String         @id @default(uuid())
+  projectId       String
+  userId          String
+  status          AnalysisStatus @default(PENDING)
+  sourceType      String         @default("ai_inference")
+  inputSnapshot   Json
+  normalizedInput Json?
+  inferredInsights Json?
+  strengths       Json?
+  weaknesses      Json?
+  opportunities   Json?
+  messagingAngles Json?
+  disclaimers     Json?
+  errorMessage    String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  project       Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  adGenerations AdGeneration[]
+
+  @@index([projectId])
+  @@index([userId])
+  @@map("analyses")
+}
+
+model AdGeneration {
+  id              String         @id @default(uuid())
+  projectId       String
+  userId          String
+  analysisId      String?
+  type            GenerationType
+  promptSnapshot  Json
+  output          Json
+  tone            String?
+  audience        String?
+  objective       String?
+  tokensUsed      Int?
+  estimatedCost   Float?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  project  Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  analysis Analysis? @relation(fields: [analysisId], references: [id], onDelete: SetNull)
+
+  @@index([projectId])
+  @@index([userId])
+  @@map("ad_generations")
+}
+
+model Export {
+  id         String     @id @default(uuid())
+  userId     String
+  projectId  String
+  type       ExportType
+  storageKey String?
+  fileUrl    String?
+  metadata   Json?
+  createdAt  DateTime   @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("exports")
+}
+
+model ApiKeySetting {
+  id           String   @id @default(uuid())
+  userId       String
+  provider     String
+  encryptedKey String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider])
+  @@map("api_key_settings")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String
+  action    String
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([action])
+  @@map("audit_logs")
+}
