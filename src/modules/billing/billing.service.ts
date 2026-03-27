@@ -3,7 +3,10 @@ import { config } from '../../config';
 import { prisma } from '../../lib/prisma';
 import { NotFoundError, AppError, ErrorCode } from '../../lib/errors';
 import { logger } from '../../lib/logger';
+import { getRedis } from '../../lib/redis';
 import { Plan, SubscriptionStatus } from '@prisma/client';
+
+const WEBHOOK_IDEMPOTENCY_TTL = 60 * 60 * 24; // 24 hours
 
 const stripe = new Stripe(config.stripe.secretKey, {
   apiVersion: '2024-10-28.acacia' as Stripe.LatestApiVersion,
@@ -122,6 +125,15 @@ export class BillingService {
     } catch (err) {
       logger.error({ err }, 'Stripe webhook signature verification failed');
       throw new AppError(400, ErrorCode.BAD_REQUEST, 'Invalid webhook signature');
+    }
+
+    // Idempotency check: skip if we've already processed this event
+    const redis = getRedis();
+    const idempotencyKey = `stripe:webhook:${event.id}`;
+    const alreadyProcessed = await redis.set(idempotencyKey, '1', 'EX', WEBHOOK_IDEMPOTENCY_TTL, 'NX');
+    if (alreadyProcessed === null) {
+      logger.info({ eventId: event.id }, 'Duplicate Stripe webhook event, skipping');
+      return;
     }
 
     logger.info({ type: event.type, id: event.id }, 'Processing Stripe webhook');

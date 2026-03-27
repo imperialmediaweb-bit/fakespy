@@ -1,10 +1,13 @@
 import { createApp } from './app';
 import { config } from './config';
+import { validateConfig } from './config/validate';
 import { connectDatabase, disconnectDatabase } from './lib/prisma';
 import { disconnectRedis } from './lib/redis';
 import { logger } from './lib/logger';
 
 async function main() {
+  validateConfig();
+
   const app = createApp();
 
   await connectDatabase();

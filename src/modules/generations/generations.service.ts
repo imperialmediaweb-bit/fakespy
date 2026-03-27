@@ -3,7 +3,7 @@ import { NotFoundError, ForbiddenError } from '../../lib/errors';
 import { CreateGenerationInput } from '../../validators/generation.validators';
 import { getDefaultAiProvider } from '../../providers/ai/ai.factory';
 import { getPromptBuilder } from './prompt-builders';
-import { usageService } from '../auth/usage.service';
+
 import { logger } from '../../lib/logger';
 import { GenerationType } from '@prisma/client';
 
@@ -87,7 +87,7 @@ export class GenerationsService {
       },
     });
 
-    await usageService.incrementUsage(userId, 'generationsUsed');
+    // Usage was already incremented by the middleware (atomic check-and-reserve)
 
     await prisma.auditLog.create({
       data: {

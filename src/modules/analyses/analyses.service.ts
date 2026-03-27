@@ -82,14 +82,7 @@ export class AnalysesService {
         },
       });
 
-      // Increment usage
-      const analysis = await prisma.analysis.findUnique({
-        where: { id: analysisId },
-        select: { userId: true },
-      });
-      if (analysis) {
-        await usageService.incrementUsage(analysis.userId, 'analysesUsed');
-      }
+      // Usage was already incremented by the middleware (atomic check-and-reserve)
 
       logger.info({ analysisId }, 'Analysis completed successfully');
     } catch (error) {
@@ -101,6 +94,16 @@ export class AnalysesService {
           errorMessage: message,
         },
       });
+
+      // Release the usage reservation since the operation failed
+      const failedAnalysis = await prisma.analysis.findUnique({
+        where: { id: analysisId },
+        select: { userId: true },
+      });
+      if (failedAnalysis) {
+        await usageService.decrementUsage(failedAnalysis.userId, 'analysesUsed');
+      }
+
       logger.error({ analysisId, error }, 'Analysis processing failed');
     }
   }

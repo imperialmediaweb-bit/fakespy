@@ -25,6 +25,12 @@ function mapResourceToLimit(resource: string): keyof ReturnType<typeof getPlanLi
   }
 }
 
+/**
+ * Enforces plan limits using atomic check-and-increment.
+ * The usage counter is incremented optimistically when the request starts.
+ * If the downstream operation fails, the service layer should call
+ * `usageService.decrementUsage()` to release the reservation.
+ */
 export function enforceLimit(resource: 'analyses' | 'generations' | 'exports') {
   return async (req: Request, _res: Response, next: NextFunction) => {
     try {
@@ -48,16 +54,23 @@ export function enforceLimit(resource: 'analyses' | 'generations' | 'exports') {
       }
 
       const monthKey = getCurrentMonthKey();
+      const usedField = mapResourceToField(resource);
+
+      // Atomic check-and-increment: upsert with increment, then verify limit
       const usage = await prisma.usage.upsert({
         where: { userId_monthKey: { userId, monthKey } },
-        create: { userId, monthKey },
-        update: {},
+        create: { userId, monthKey, [usedField]: 1 },
+        update: { [usedField]: { increment: 1 } },
       });
 
-      const usedField = mapResourceToField(resource);
       const currentUsage = usage[usedField];
 
-      if (currentUsage >= limitValue) {
+      // If after incrementing we're over the limit, roll back and reject
+      if (currentUsage > limitValue) {
+        await prisma.usage.update({
+          where: { userId_monthKey: { userId, monthKey } },
+          data: { [usedField]: { decrement: 1 } },
+        });
         throw new PlanLimitError(resource);
       }
 

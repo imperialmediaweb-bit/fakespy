@@ -1,6 +1,6 @@
 import { prisma } from '../../lib/prisma';
 import { NotFoundError, ForbiddenError } from '../../lib/errors';
-import { usageService } from '../auth/usage.service';
+
 
 export class ExportsService {
   async exportProject(userId: string, projectId: string) {
@@ -76,7 +76,7 @@ export class ExportsService {
       },
     });
 
-    await usageService.incrementUsage(userId, 'exportsUsed');
+    // Usage was already incremented by the middleware (atomic check-and-reserve)
 
     await prisma.auditLog.create({
       data: {

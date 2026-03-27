@@ -9,6 +9,7 @@ import {
   NotFoundError,
 } from '../../lib/errors';
 import { logger } from '../../lib/logger';
+import { getEmailProvider } from '../../providers/email/email.factory';
 
 const SALT_ROUNDS = 12;
 
@@ -63,6 +64,16 @@ export class AuthService {
     const tokens = await this.generateTokens(user.id, user.role);
 
     await this.logAction(user.id, 'USER_REGISTERED');
+
+    // Send verification email
+    const verifyUrl = `${config.frontendUrl}/verify-email?token=${emailVerifyToken}`;
+    const emailProvider = getEmailProvider();
+    await emailProvider.send({
+      to: email.toLowerCase(),
+      subject: 'FakeSpy AI – Verify Your Email',
+      text: `Welcome to FakeSpy AI!\n\nPlease verify your email by visiting:\n${verifyUrl}`,
+      html: `<p>Welcome to FakeSpy AI!</p><p><a href="${verifyUrl}">Click here to verify your email</a>.</p>`,
+    });
 
     logger.info({ userId: user.id }, 'User registered');
 
@@ -146,11 +157,14 @@ export class AuthService {
       data: { resetToken, resetTokenExpiry },
     });
 
-    // TODO: Send email with reset link when email provider is configured
-    // For now, log the token in development
-    if (config.env === 'development') {
-      logger.info({ resetToken, userId: user.id }, 'Password reset token generated (dev only)');
-    }
+    const resetUrl = `${config.frontendUrl}/reset-password?token=${resetToken}`;
+    const emailProvider = getEmailProvider();
+    await emailProvider.send({
+      to: user.email,
+      subject: 'FakeSpy AI – Reset Your Password',
+      text: `You requested a password reset.\n\nClick the link below to reset your password (expires in 1 hour):\n${resetUrl}\n\nIf you did not request this, please ignore this email.`,
+      html: `<p>You requested a password reset.</p><p><a href="${resetUrl}">Click here to reset your password</a> (expires in 1 hour).</p><p>If you did not request this, please ignore this email.</p>`,
+    });
 
     await this.logAction(user.id, 'PASSWORD_RESET_REQUESTED');
   }
