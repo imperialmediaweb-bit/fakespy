@@ -31,6 +31,8 @@ import ProjectDetailPage from '@/pages/dashboard/ProjectDetailPage';
 import GenerateAdsPage from '@/pages/dashboard/GenerateAdsPage';
 import AnalysisDetailPage from '@/pages/dashboard/AnalysisDetailPage';
 import GenerationDetailPage from '@/pages/dashboard/GenerationDetailPage';
+import AnalysesListPage from '@/pages/dashboard/AnalysesListPage';
+import GenerationsListPage from '@/pages/dashboard/GenerationsListPage';
 import ExportsPage from '@/pages/dashboard/ExportsPage';
 import BillingPage from '@/pages/dashboard/BillingPage';
 import SettingsPage from '@/pages/dashboard/SettingsPage';
@@ -95,7 +97,9 @@ export default function App() {
               <Route path="projects/new" element={<NewProjectPage />} />
               <Route path="projects/:id" element={<ProjectDetailPage />} />
               <Route path="projects/:id/generate" element={<GenerateAdsPage />} />
+              <Route path="analyses" element={<AnalysesListPage />} />
               <Route path="analyses/:id" element={<AnalysisDetailPage />} />
+              <Route path="generations" element={<GenerationsListPage />} />
               <Route path="generations/:id" element={<GenerationDetailPage />} />
               <Route path="exports" element={<ExportsPage />} />
               <Route path="billing" element={<BillingPage />} />

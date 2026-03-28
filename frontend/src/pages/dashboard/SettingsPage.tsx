@@ -1,13 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { settingsApi } from '@/api/settings';
 import { PageHeader } from '@/components/shared';
-import { Loader2, CheckCircle2, Trash2 } from 'lucide-react';
-import type { ApiKeyEntry } from '@/types/api';
+import { Loader2, CheckCircle2 } from 'lucide-react';
 
 export default function SettingsPage() {
   const { user, refreshUser } = useAuth();
-  const [tab, setTab] = useState<'profile' | 'password' | 'apikeys'>('profile');
+  const [tab, setTab] = useState<'profile' | 'password'>('profile');
   const [name, setName] = useState(user?.name || '');
   const [email, setEmail] = useState(user?.email || '');
   const [profileMsg, setProfileMsg] = useState('');
@@ -18,12 +17,6 @@ export default function SettingsPage() {
   const [pwMsg, setPwMsg] = useState('');
   const [pwErr, setPwErr] = useState('');
   const [pwLoading, setPwLoading] = useState(false);
-  const [keys, setKeys] = useState<ApiKeyEntry[]>([]);
-  const [keyProvider, setKeyProvider] = useState('');
-  const [keyValue, setKeyValue] = useState('');
-  const [keyLoading, setKeyLoading] = useState(false);
-
-  useEffect(() => { settingsApi.getApiKeys().then(r => setKeys(r.data.data)).catch(() => {}); }, []);
 
   const saveProfile = async (e: React.FormEvent) => {
     e.preventDefault(); setProfileErr(''); setProfileMsg(''); setProfileLoading(true);
@@ -37,16 +30,8 @@ export default function SettingsPage() {
     finally { setPwLoading(false); }
   };
 
-  const addKey = async (e: React.FormEvent) => {
-    e.preventDefault(); if (!keyProvider || !keyValue) return; setKeyLoading(true);
-    try { const { data } = await settingsApi.createApiKey({ provider: keyProvider, key: keyValue }); setKeys([...keys.filter(k => k.provider !== keyProvider), data.data]); setKeyProvider(''); setKeyValue(''); } catch { }
-    finally { setKeyLoading(false); }
-  };
-
-  const deleteKey = async (id: string) => { await settingsApi.deleteApiKey(id); setKeys(keys.filter(k => k.id !== id)); };
-
   const inputClass = "w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50";
-  const tabs = [{ key: 'profile', label: 'Profile' }, { key: 'password', label: 'Password' }, { key: 'apikeys', label: 'API Keys' }] as const;
+  const tabs = [{ key: 'profile', label: 'Profile' }, { key: 'password', label: 'Password' }] as const;
 
   return (
     <div>
@@ -71,25 +56,6 @@ export default function SettingsPage() {
           <div><label className="block text-sm font-medium mb-1.5">New Password</label><input type="password" value={newPw} onChange={e => setNewPw(e.target.value)} className={inputClass} placeholder="Min 8 chars, uppercase, lowercase, number" /></div>
           <button type="submit" disabled={pwLoading} className="bg-primary text-primary-foreground px-6 py-2 rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-50 flex items-center gap-2">{pwLoading && <Loader2 className="h-4 w-4 animate-spin" />} Change Password</button>
         </form>
-      )}
-      {tab === 'apikeys' && (
-        <div className="max-w-md space-y-6">
-          <form onSubmit={addKey} className="space-y-3">
-            <div className="grid grid-cols-2 gap-3">
-              <input value={keyProvider} onChange={e => setKeyProvider(e.target.value)} className={inputClass} placeholder="Provider (openai, etc)" />
-              <input value={keyValue} onChange={e => setKeyValue(e.target.value)} className={inputClass} placeholder="API Key" />
-            </div>
-            <button type="submit" disabled={keyLoading} className="bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-50">Save Key</button>
-          </form>
-          {keys.length > 0 && (
-            <div className="space-y-2">{keys.map(k => (
-              <div key={k.id} className="flex items-center justify-between p-3 border border-border rounded-lg">
-                <span className="text-sm font-medium">{k.provider}</span>
-                <button onClick={() => deleteKey(k.id)} className="text-destructive hover:text-destructive/80"><Trash2 className="h-4 w-4" /></button>
-              </div>
-            ))}</div>
-          )}
-        </div>
       )}
     </div>
   );
