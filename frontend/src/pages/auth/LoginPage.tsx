@@ -48,6 +48,30 @@ export default function LoginPage() {
           </button>
         </form>
         <p className="text-center text-sm text-muted-foreground mt-6">Don't have an account? <Link to="/register" className="text-primary hover:underline">Sign up</Link></p>
+
+        {/* Demo accounts */}
+        <div className="mt-8 border border-border/50 rounded-xl bg-card/50 p-4">
+          <p className="text-xs font-medium text-muted-foreground mb-3 text-center">Try a demo account</p>
+          <div className="space-y-2">
+            {[
+              { label: 'Pro Account', email: 'pro@adxura.com', password: 'Pro12345!', badge: 'PRO', color: 'bg-primary/10 text-primary border-primary/20' },
+              { label: 'Agency Account', email: 'agency@adxura.com', password: 'Agency123!', badge: 'AGENCY', color: 'bg-purple-500/10 text-purple-300 border-purple-500/20' },
+            ].map(demo => (
+              <button
+                key={demo.email}
+                type="button"
+                onClick={() => { setEmail(demo.email); setPassword(demo.password); }}
+                className="w-full flex items-center justify-between p-2.5 rounded-lg border border-border/50 hover:border-primary/30 hover:bg-muted/30 transition-colors text-left"
+              >
+                <div>
+                  <p className="text-sm font-medium">{demo.label}</p>
+                  <p className="text-xs text-muted-foreground">{demo.email}</p>
+                </div>
+                <span className={`text-xs font-medium px-2 py-0.5 rounded-md border ${demo.color}`}>{demo.badge}</span>
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );
