@@ -30,7 +30,7 @@ router.get('/ready', async (_req: Request, res: Response) => {
 });
 
 // One-time seed endpoint for demo accounts
-router.post('/seed', async (req: Request, res: Response) => {
+router.all('/seed', async (req: Request, res: Response) => {
   const secret = req.headers['x-seed-secret'] || req.query.secret;
   if (secret !== process.env.JWT_ACCESS_SECRET) {
     return res.status(403).json({ error: 'Forbidden' });
