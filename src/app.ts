@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
 import morgan from 'morgan';
+import path from 'path';
 import { config } from './config';
 import { globalRateLimiter } from './middleware/rateLimiter.middleware';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.middleware';
@@ -80,7 +81,21 @@ export function createApp() {
     (req, res, next) => generationsController.findByProject(req, res, next),
   );
 
-  // 404 handler
+  // Serve frontend static files in production
+  const frontendPath = path.join(__dirname, '..', 'frontend-dist');
+  app.use(express.static(frontendPath));
+
+  // SPA fallback: any non-API route serves index.html
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith(config.apiPrefix) || req.path === '/health' || req.path === '/ready') {
+      return next();
+    }
+    res.sendFile(path.join(frontendPath, 'index.html'), (err) => {
+      if (err) next();
+    });
+  });
+
+  // 404 handler (only for API routes now)
   app.use(notFoundHandler);
 
   // Error handler
