@@ -26,4 +26,13 @@ export const adminApi = {
   getAuditLogs(page = 1, limit = 20) {
     return api.get<ApiResponse<{ logs: any[]; pagination: any }>>('/admin/logs', { params: { page, limit } });
   },
+  getProviderSchema() {
+    return api.get<ApiResponse<Record<string, { key: string; label: string; hasValue: boolean; sensitive: boolean }[]>>>('/admin/settings/providers');
+  },
+  saveProviderSetting(key: string, value: string) {
+    return api.post('/admin/settings/provider', { key, value });
+  },
+  deleteProviderSetting(key: string) {
+    return api.delete(`/admin/settings/provider/${key}`);
+  },
 };

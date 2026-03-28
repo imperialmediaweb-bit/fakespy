@@ -1,0 +1,14 @@
+CREATE TABLE "system_settings" (
+    "id" TEXT NOT NULL,
+    "key" TEXT NOT NULL,
+    "value" TEXT NOT NULL,
+    "encrypted" BOOLEAN NOT NULL DEFAULT false,
+    "category" TEXT NOT NULL,
+    "label" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "system_settings_pkey" PRIMARY KEY ("id")
+);
+
+CREATE UNIQUE INDEX "system_settings_key_key" ON "system_settings"("key");

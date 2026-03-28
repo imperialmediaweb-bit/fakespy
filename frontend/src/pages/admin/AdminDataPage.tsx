@@ -114,39 +114,101 @@ export function AdminUsagePage() {
   );
 }
 
+const CATEGORY_INFO: Record<string, { title: string; icon: string; description: string }> = {
+  ai: { title: 'AI Providers', icon: '🧠', description: 'Configure which AI models power analysis and ad generation.' },
+  payment: { title: 'Payment Processors', icon: '💳', description: 'Set up payment gateways for subscriptions and billing.' },
+  email: { title: 'Email / SMTP', icon: '📧', description: 'Configure email delivery for notifications, password resets, and invoices.' },
+  general: { title: 'General', icon: '⚙️', description: 'Platform-wide configuration.' },
+};
+
 export function AdminSystemPage() {
+  const [schema, setSchema] = useState<Record<string, { key: string; label: string; hasValue: boolean; sensitive: boolean }[]> | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState('');
+
+  const load = () => {
+    adminApi.getProviderSchema().then(r => setSchema(r.data.data)).finally(() => setLoading(false));
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const handleSave = async (key: string) => {
+    if (!editValue.trim()) return;
+    setSaving(true); setMessage('');
+    try {
+      await adminApi.saveProviderSetting(key, editValue);
+      setMessage(`${key} saved`);
+      setEditing(null); setEditValue('');
+      load();
+    } catch { setMessage('Failed to save'); }
+    finally { setSaving(false); }
+  };
+
+  const handleDelete = async (key: string) => {
+    if (!confirm(`Remove ${key}?`)) return;
+    try { await adminApi.deleteProviderSetting(key); load(); } catch {}
+  };
+
+  if (loading) return <LoadingSpinner />;
+
   return (
     <div>
-      <PageHeader title="System Settings" description="Platform configuration." />
-      <div className="space-y-6 max-w-2xl">
-        <div className="border border-border rounded-xl bg-card p-6">
-          <h3 className="font-semibold mb-3">Platform Info</h3>
-          <div className="text-sm space-y-2 text-muted-foreground">
-            <p><strong className="text-foreground">Version:</strong> 1.0.0</p>
-            <p><strong className="text-foreground">Environment:</strong> Production</p>
-            <p><strong className="text-foreground">AI Provider:</strong> OpenAI (GPT-4o)</p>
-            <p><strong className="text-foreground">Payment Provider:</strong> Stripe</p>
-            <p><strong className="text-foreground">Database:</strong> PostgreSQL via Prisma</p>
-          </div>
-        </div>
-        <div className="border border-border rounded-xl bg-card p-6">
-          <h3 className="font-semibold mb-3">Provider Integrations</h3>
-          <div className="space-y-3">
-            {[
-              { name: 'OpenAI API', status: 'Configured', desc: 'Used for analysis and generation' },
-              { name: 'Stripe', status: 'Configured', desc: 'Handles subscriptions and billing' },
-              { name: 'SMTP Email', status: 'Optional', desc: 'For transactional emails — falls back to console logging' },
-              { name: 'Redis', status: 'Configured', desc: 'Webhook idempotency and rate limiting' },
-              { name: 'Meta Ad Library', status: 'Planned', desc: 'Real ad intelligence — future integration' },
-              { name: 'Google Ads Transparency', status: 'Planned', desc: 'Real ad intelligence — future integration' },
-            ].map(p => (
-              <div key={p.name} className="flex items-center justify-between py-2 border-b border-border/50 last:border-0">
-                <div><p className="text-sm font-medium">{p.name}</p><p className="text-xs text-muted-foreground">{p.desc}</p></div>
-                <span className={`text-xs px-2 py-0.5 rounded-full border ${p.status === 'Configured' ? 'bg-green-500/10 text-green-400 border-green-500/20' : p.status === 'Planned' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'}`}>{p.status}</span>
+      <PageHeader title="System Settings" description="Configure AI providers, payment processors, email, and platform settings. Keys are encrypted with AES-256-GCM." />
+      {message && <div className="mb-4 bg-green-500/10 text-green-400 text-sm p-3 rounded-lg">{message}</div>}
+      <div className="space-y-8 max-w-3xl">
+        {schema && Object.entries(schema).map(([category, settings]) => {
+          const info = CATEGORY_INFO[category] || { title: category, icon: '📦', description: '' };
+          return (
+            <div key={category} className="border border-border rounded-xl bg-card overflow-hidden">
+              <div className="p-5 border-b border-border/50 bg-muted/20">
+                <h3 className="font-semibold flex items-center gap-2">{info.icon} {info.title}</h3>
+                <p className="text-xs text-muted-foreground mt-1">{info.description}</p>
               </div>
-            ))}
-          </div>
-        </div>
+              <div className="divide-y divide-border/50">
+                {settings.map(s => (
+                  <div key={s.key} className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium">{s.label}</p>
+                        <p className="text-xs text-muted-foreground font-mono">{s.key}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {s.hasValue ? (
+                          <span className="text-xs px-2 py-0.5 rounded-full border bg-green-500/10 text-green-400 border-green-500/20">Configured</span>
+                        ) : (
+                          <span className="text-xs px-2 py-0.5 rounded-full border bg-muted text-muted-foreground border-border">Not set</span>
+                        )}
+                        {editing === s.key ? null : (
+                          <>
+                            <button onClick={() => { setEditing(s.key); setEditValue(''); }} className="text-xs text-primary hover:underline">{s.hasValue ? 'Update' : 'Set'}</button>
+                            {s.hasValue && <button onClick={() => handleDelete(s.key)} className="text-xs text-destructive hover:underline">Remove</button>}
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    {editing === s.key && (
+                      <div className="flex gap-2 mt-3">
+                        <input
+                          type={s.sensitive ? 'password' : 'text'}
+                          value={editValue}
+                          onChange={e => setEditValue(e.target.value)}
+                          className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                          placeholder={`Enter ${s.label}...`}
+                          autoFocus
+                        />
+                        <button onClick={() => handleSave(s.key)} disabled={saving} className="bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-50">Save</button>
+                        <button onClick={() => setEditing(null)} className="border border-border px-3 py-2 rounded-lg text-sm hover:bg-muted/50">Cancel</button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

@@ -228,3 +228,16 @@ model AuditLog {
   @@index([action])
   @@map("audit_logs")
 }
+
+model SystemSetting {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     String   // encrypted for sensitive values
+  encrypted Boolean  @default(false)
+  category  String   // 'payment', 'email', 'ai', 'general'
+  label     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("system_settings")
+}
