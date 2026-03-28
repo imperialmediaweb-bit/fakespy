@@ -13,6 +13,8 @@ import PricingPage from '@/pages/public/PricingPage';
 import FeaturesPage from '@/pages/public/FeaturesPage';
 import FaqPage from '@/pages/public/FaqPage';
 import ContactPage from '@/pages/public/ContactPage';
+import PrivacyPolicyPage from '@/pages/public/PrivacyPolicyPage';
+import TermsPage from '@/pages/public/TermsPage';
 
 // Auth
 import LoginPage from '@/pages/auth/LoginPage';
@@ -37,7 +39,7 @@ import SettingsPage from '@/pages/dashboard/SettingsPage';
 import AdminDashboard from '@/pages/admin/AdminDashboard';
 import AdminUsersPage from '@/pages/admin/AdminUsersPage';
 import AdminSubscriptionsPage from '@/pages/admin/AdminSubscriptionsPage';
-import AdminPlaceholder from '@/pages/admin/AdminPlaceholder';
+import { AdminProjectsPage, AdminAnalysesPage, AdminGenerationsPage, AdminExportsPage, AdminAuditLogsPage, AdminUsagePage, AdminSystemPage } from '@/pages/admin/AdminDataPage';
 
 import { LoadingSpinner } from '@/components/shared';
 
@@ -76,6 +78,8 @@ export default function App() {
             <Route path="/features" element={<FeaturesPage />} />
             <Route path="/faq" element={<FaqPage />} />
             <Route path="/contact" element={<ContactPage />} />
+            <Route path="/privacy" element={<PrivacyPolicyPage />} />
+            <Route path="/terms" element={<TermsPage />} />
 
             {/* Auth */}
             <Route path="/login" element={<GuestRoute><LoginPage /></GuestRoute>} />
@@ -103,13 +107,13 @@ export default function App() {
               <Route index element={<AdminDashboard />} />
               <Route path="users" element={<AdminUsersPage />} />
               <Route path="subscriptions" element={<AdminSubscriptionsPage />} />
-              <Route path="usage" element={<AdminPlaceholder title="Usage Overview" />} />
-              <Route path="projects" element={<AdminPlaceholder title="Projects Overview" />} />
-              <Route path="analyses" element={<AdminPlaceholder title="Analyses Overview" />} />
-              <Route path="generations" element={<AdminPlaceholder title="Generations Overview" />} />
-              <Route path="exports" element={<AdminPlaceholder title="Exports Overview" />} />
-              <Route path="logs" element={<AdminPlaceholder title="Audit Logs" />} />
-              <Route path="system" element={<AdminPlaceholder title="System Settings" />} />
+              <Route path="usage" element={<AdminUsagePage />} />
+              <Route path="projects" element={<AdminProjectsPage />} />
+              <Route path="analyses" element={<AdminAnalysesPage />} />
+              <Route path="generations" element={<AdminGenerationsPage />} />
+              <Route path="exports" element={<AdminExportsPage />} />
+              <Route path="logs" element={<AdminAuditLogsPage />} />
+              <Route path="system" element={<AdminSystemPage />} />
             </Route>
 
             {/* Catch-all */}

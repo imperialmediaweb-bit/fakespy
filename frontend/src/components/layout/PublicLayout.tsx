@@ -62,8 +62,8 @@ export function PublicLayout({ children }: { children: ReactNode }) {
             <div>
               <h4 className="font-semibold mb-4">Legal</h4>
               <div className="space-y-2 text-sm text-muted-foreground">
-                <span className="block">Privacy Policy</span>
-                <span className="block">Terms of Service</span>
+                <Link to="/privacy" className="block hover:text-foreground">Privacy Policy</Link>
+                <Link to="/terms" className="block hover:text-foreground">Terms of Service</Link>
               </div>
             </div>
             <div>

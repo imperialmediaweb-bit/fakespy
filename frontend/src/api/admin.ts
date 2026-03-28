@@ -9,6 +9,21 @@ export const adminApi = {
     return api.get<ApiResponse<{ subscriptions: any[]; pagination: any }>>('/admin/subscriptions', { params: { page, limit } });
   },
   getUsageStats() {
-    return api.get<ApiResponse<{ totalUsers: number; activeSubscriptions: number; currentMonth: string; monthlyUsage: { totalAnalyses: number; totalGenerations: number; totalExports: number } }>>('/admin/usage');
+    return api.get<ApiResponse<any>>('/admin/usage');
+  },
+  getProjects(page = 1, limit = 20) {
+    return api.get<ApiResponse<{ projects: any[]; pagination: any }>>('/admin/projects', { params: { page, limit } });
+  },
+  getAnalyses(page = 1, limit = 20) {
+    return api.get<ApiResponse<{ analyses: any[]; pagination: any }>>('/admin/analyses', { params: { page, limit } });
+  },
+  getGenerations(page = 1, limit = 20) {
+    return api.get<ApiResponse<{ generations: any[]; pagination: any }>>('/admin/generations', { params: { page, limit } });
+  },
+  getExports(page = 1, limit = 20) {
+    return api.get<ApiResponse<{ exports: any[]; pagination: any }>>('/admin/exports', { params: { page, limit } });
+  },
+  getAuditLogs(page = 1, limit = 20) {
+    return api.get<ApiResponse<{ logs: any[]; pagination: any }>>('/admin/logs', { params: { page, limit } });
   },
 };
