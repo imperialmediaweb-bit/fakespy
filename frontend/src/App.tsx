@@ -39,6 +39,7 @@ import ExportsPage from '@/pages/dashboard/ExportsPage';
 import BillingPage from '@/pages/dashboard/BillingPage';
 import SettingsPage from '@/pages/dashboard/SettingsPage';
 import AudienceBuilderPage from '@/pages/dashboard/AudienceBuilderPage';
+import AgencyDashboard from '@/pages/agency/AgencyDashboard';
 
 // Admin
 import AdminDashboard from '@/pages/admin/AdminDashboard';
@@ -111,6 +112,7 @@ export default function App() {
               <Route path="exports" element={<ExportsPage />} />
               <Route path="billing" element={<BillingPage />} />
               <Route path="settings" element={<SettingsPage />} />
+              <Route path="agency" element={<AgencyDashboard />} />
             </Route>
 
             {/* Admin */}

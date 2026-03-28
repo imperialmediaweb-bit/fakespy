@@ -1,7 +1,7 @@
 import { type ReactNode, useState } from 'react';
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { LayoutDashboard, FolderOpen, Search, Sparkles, Download, CreditCard, Settings, LogOut, Menu, X, type LucideIcon } from 'lucide-react';
+import { LayoutDashboard, FolderOpen, Search, Sparkles, Download, CreditCard, Settings, LogOut, Menu, X, Briefcase, type LucideIcon } from 'lucide-react';
 import { AdxuraLogo } from '@/components/shared/AdxuraLogo';
 
 interface NavItem { href: string; label: string; icon: LucideIcon }
@@ -34,8 +34,11 @@ export function DashboardLayout({ children }: { children?: ReactNode }) {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  const isAgency = user?.subscription?.plan === 'AGENCY';
+
   const navItems: NavItem[] = [
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    ...(isAgency ? [{ href: '/dashboard/agency', label: 'Agency', icon: Briefcase }] : []),
     { href: '/dashboard/projects', label: 'Projects', icon: FolderOpen },
     { href: '/dashboard/analyses', label: 'Analyses', icon: Search },
     { href: '/dashboard/generations', label: 'Generations', icon: Sparkles },
