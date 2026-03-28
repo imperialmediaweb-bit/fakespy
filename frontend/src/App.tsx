@@ -15,6 +15,8 @@ import FaqPage from '@/pages/public/FaqPage';
 import ContactPage from '@/pages/public/ContactPage';
 import PrivacyPolicyPage from '@/pages/public/PrivacyPolicyPage';
 import TermsPage from '@/pages/public/TermsPage';
+import BlogPage from '@/pages/public/BlogPage';
+import BlogPostPage from '@/pages/public/BlogPostPage';
 
 // Auth
 import LoginPage from '@/pages/auth/LoginPage';
@@ -82,6 +84,8 @@ export default function App() {
             <Route path="/features" element={<FeaturesPage />} />
             <Route path="/faq" element={<FaqPage />} />
             <Route path="/contact" element={<ContactPage />} />
+            <Route path="/blog" element={<BlogPage />} />
+            <Route path="/blog/:slug" element={<BlogPostPage />} />
             <Route path="/privacy" element={<PrivacyPolicyPage />} />
             <Route path="/terms" element={<TermsPage />} />
 
