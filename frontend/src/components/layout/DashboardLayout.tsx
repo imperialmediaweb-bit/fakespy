@@ -2,6 +2,7 @@ import { type ReactNode, useState } from 'react';
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { LayoutDashboard, FolderOpen, Search, Sparkles, Download, CreditCard, Settings, LogOut, Menu, X, type LucideIcon } from 'lucide-react';
+import { AdxuraLogo } from '@/components/shared/AdxuraLogo';
 
 interface NavItem { href: string; label: string; icon: LucideIcon }
 
@@ -9,7 +10,7 @@ function SidebarContent({ items, pathname, onNav }: { items: NavItem[]; pathname
   return (
     <div className="flex flex-col h-full">
       <div className="p-4 border-b border-border/50">
-        <Link to="/dashboard" className="text-lg font-bold text-primary">Adxura</Link>
+        <Link to="/dashboard" className="hover:opacity-90 transition-opacity"><AdxuraLogo size="sm" /></Link>
       </div>
       <nav className="flex-1 p-3 space-y-1">
         {items.map(item => {

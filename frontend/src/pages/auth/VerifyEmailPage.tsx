@@ -1,3 +1,4 @@
+import { AdxuraLogo } from '@/components/shared/AdxuraLogo';
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { authApi } from '@/api/auth';
@@ -16,7 +17,7 @@ export default function VerifyEmailPage() {
   return (
     <div className="min-h-screen flex items-center justify-center px-4">
       <div className="text-center">
-        <Link to="/" className="text-2xl font-bold text-primary">Adxura</Link>
+        <Link to="/" className="hover:opacity-90 transition-opacity inline-block"><AdxuraLogo size="default" /></Link>
         <div className="mt-8">
           {status === 'loading' && <><Loader2 className="h-10 w-10 animate-spin text-primary mx-auto" /><p className="mt-4 text-muted-foreground">Verifying your email...</p></>}
           {status === 'success' && <><CheckCircle2 className="h-10 w-10 text-primary mx-auto" /><h2 className="text-xl font-semibold mt-4">Email verified!</h2><p className="text-muted-foreground mt-2">Your email has been confirmed.</p><Link to="/dashboard" className="text-primary hover:underline text-sm mt-4 inline-block">Go to dashboard</Link></>}

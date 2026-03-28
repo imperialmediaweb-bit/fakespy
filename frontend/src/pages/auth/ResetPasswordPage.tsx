@@ -1,3 +1,4 @@
+import { AdxuraLogo } from '@/components/shared/AdxuraLogo';
 import { useState } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { authApi } from '@/api/auth';
@@ -28,7 +29,7 @@ export default function ResetPasswordPage() {
   return (
     <div className="min-h-screen flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
-        <div className="text-center mb-8"><Link to="/" className="text-2xl font-bold text-primary">Adxura</Link><h1 className="text-xl font-semibold mt-4">Set new password</h1></div>
+        <div className="text-center mb-8"><Link to="/" className="hover:opacity-90 transition-opacity inline-block"><AdxuraLogo size="default" /></Link><h1 className="text-xl font-semibold mt-4">Set new password</h1></div>
         {done ? (
           <div className="text-center py-8 border border-border rounded-xl bg-card p-6">
             <CheckCircle2 className="h-10 w-10 text-primary mx-auto mb-3" />

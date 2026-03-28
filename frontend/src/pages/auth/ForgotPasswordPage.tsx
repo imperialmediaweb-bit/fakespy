@@ -1,3 +1,4 @@
+import { AdxuraLogo } from '@/components/shared/AdxuraLogo';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { authApi } from '@/api/auth';
@@ -20,7 +21,7 @@ export default function ForgotPasswordPage() {
     <div className="min-h-screen flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <Link to="/" className="text-2xl font-bold text-primary">Adxura</Link>
+          <Link to="/" className="hover:opacity-90 transition-opacity inline-block"><AdxuraLogo size="default" /></Link>
           <h1 className="text-xl font-semibold mt-4">Reset your password</h1>
           <p className="text-sm text-muted-foreground mt-1">We'll send you a reset link</p>
         </div>

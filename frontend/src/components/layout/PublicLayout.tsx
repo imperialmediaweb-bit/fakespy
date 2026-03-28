@@ -1,6 +1,7 @@
 import { type ReactNode, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
+import { AdxuraLogo } from '@/components/shared/AdxuraLogo';
 
 export function PublicLayout({ children }: { children: ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -16,7 +17,7 @@ export function PublicLayout({ children }: { children: ReactNode }) {
     <div className="min-h-screen flex flex-col">
       <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
-          <Link to="/" className="text-xl font-bold text-primary">Adxura</Link>
+          <Link to="/" className="hover:opacity-90 transition-opacity"><AdxuraLogo size="default" /></Link>
           <nav className="hidden md:flex items-center gap-8">
             {navLinks.map(l => (
               <Link key={l.href} to={l.href} className={`text-sm transition-colors hover:text-foreground ${location.pathname === l.href ? 'text-foreground' : 'text-muted-foreground'}`}>{l.label}</Link>
@@ -66,7 +67,7 @@ export function PublicLayout({ children }: { children: ReactNode }) {
               </div>
             </div>
             <div>
-              <h4 className="font-semibold mb-4">Adxura</h4>
+              <div className="mb-4"><AdxuraLogo size="sm" /></div>
               <p className="text-sm text-muted-foreground">AI-powered ad intelligence and generation platform for marketers and agencies.</p>
             </div>
           </div>
