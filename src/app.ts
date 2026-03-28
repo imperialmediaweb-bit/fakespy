@@ -20,6 +20,10 @@ import exportsRoutes from './modules/exports/exports.routes';
 import billingRoutes from './modules/billing/billing.routes';
 import settingsRoutes from './modules/settings/settings.routes';
 import adminRoutes from './modules/admin/admin.routes';
+import blogRoutes from './modules/blog/blog.routes';
+import adScoreRoutes from './modules/adScore/adScore.routes';
+import audienceBuilderRoutes from './modules/audienceBuilder/audienceBuilder.routes';
+import adVariationsRoutes from './modules/adVariations/adVariations.routes';
 import { analysesController } from './modules/analyses/analyses.controller';
 import { generationsController } from './modules/generations/generations.controller';
 
@@ -67,6 +71,10 @@ export function createApp() {
   app.use(`${config.apiPrefix}/exports`, exportsRoutes);
   app.use(`${config.apiPrefix}/settings`, settingsRoutes);
   app.use(`${config.apiPrefix}/admin`, adminRoutes);
+  app.use(`${config.apiPrefix}/blog`, blogRoutes);
+  app.use(`${config.apiPrefix}/ad-scores`, adScoreRoutes);
+  app.use(`${config.apiPrefix}/audience`, audienceBuilderRoutes);
+  app.use(`${config.apiPrefix}/variations`, adVariationsRoutes);
 
   // Project-scoped sub-routes
   app.get(

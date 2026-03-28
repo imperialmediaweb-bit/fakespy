@@ -49,6 +49,13 @@ enum ExportType {
   PDF
 }
 
+enum BlogPostStatus {
+  DRAFT
+  SCHEDULED
+  PUBLISHED
+  ARCHIVED
+}
+
 model User {
   id              String    @id @default(uuid())
   name            String
@@ -123,10 +130,11 @@ model Project {
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
-  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  analyses      Analysis[]
-  adGenerations AdGeneration[]
-  exports       Export[]
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  analyses         Analysis[]
+  adGenerations    AdGeneration[]
+  exports          Export[]
+  audienceProfiles AudienceProfile[]
 
   @@index([userId])
   @@map("projects")
@@ -175,9 +183,11 @@ model AdGeneration {
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
 
-  project  Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  analysis Analysis? @relation(fields: [analysisId], references: [id], onDelete: SetNull)
+  project      Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  analysis     Analysis?      @relation(fields: [analysisId], references: [id], onDelete: SetNull)
+  adScore      AdScore?
+  adVariations AdVariation[]
 
   @@index([projectId])
   @@index([userId])
@@ -240,4 +250,125 @@ model SystemSetting {
   updatedAt DateTime @updatedAt
 
   @@map("system_settings")
+}
+
+// ── Blog ──
+
+model BlogCategory {
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  posts BlogPost[]
+
+  @@map("blog_categories")
+}
+
+model BlogTag {
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+
+  posts BlogPostTag[]
+
+  @@map("blog_tags")
+}
+
+model BlogPost {
+  id            String         @id @default(uuid())
+  title         String
+  slug          String         @unique
+  excerpt       String?
+  content       String
+  status        BlogPostStatus @default(DRAFT)
+  categoryId    String?
+  authorId      String
+  featuredImage String?
+  seoTitle      String?
+  seoDescription String?
+  seoKeywords   String?
+  publishedAt   DateTime?
+  scheduledAt   DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  category BlogCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  tags     BlogPostTag[]
+
+  @@index([status])
+  @@index([authorId])
+  @@map("blog_posts")
+}
+
+model BlogPostTag {
+  postId String
+  tagId  String
+
+  post BlogPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  tag  BlogTag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([postId, tagId])
+  @@map("blog_post_tags")
+}
+
+// ── Ad Scoring ──
+
+model AdScore {
+  id                 String   @id @default(uuid())
+  generationId       String   @unique
+  clarityScore       Int      // 1-100
+  emotionalImpact    Int      // 1-100
+  ctrPotential       Int      // 1-100
+  conversionStrength Int      // 1-100
+  overallScore       Int      // 1-100
+  suggestions        Json     // array of improvement suggestions
+  createdAt          DateTime @default(now())
+
+  generation AdGeneration @relation(fields: [generationId], references: [id], onDelete: Cascade)
+
+  @@map("ad_scores")
+}
+
+// ── Audience Builder ──
+
+model AudienceProfile {
+  id                  String   @id @default(uuid())
+  projectId           String
+  userId              String
+  name                String
+  avatar              Json     // ideal customer avatar details
+  painPoints          Json     // array of pain points
+  desires             Json     // array of desires
+  objections          Json     // array of objections
+  buyingTriggers      Json     // array of triggers
+  demographics        Json     // age, gender, income, location etc
+  interests           Json     // interests for ad targeting
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([userId])
+  @@map("audience_profiles")
+}
+
+// ── Ad Variations ──
+
+model AdVariation {
+  id           String   @id @default(uuid())
+  generationId String
+  userId       String
+  style        String   // short, emotional, direct_response, premium, urgency
+  output       Json
+  tokensUsed   Int?
+  createdAt    DateTime @default(now())
+
+  generation AdGeneration @relation(fields: [generationId], references: [id], onDelete: Cascade)
+
+  @@index([generationId])
+  @@map("ad_variations")
 }

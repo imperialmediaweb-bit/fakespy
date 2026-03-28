@@ -5,7 +5,7 @@ import { analysesApi } from '@/api/analyses';
 import { generationsApi } from '@/api/generations';
 import { exportsApi } from '@/api/exports';
 import { PageHeader, LoadingSpinner, ErrorState, StatusBadge, EmptyState } from '@/components/shared';
-import { Search, Sparkles, Download, Loader2 } from 'lucide-react';
+import { Search, Sparkles, Download, Loader2, Users } from 'lucide-react';
 import type { Project, Analysis, AdGeneration } from '@/types/api';
 import { formatDateTime } from '@/lib/utils';
 
@@ -72,6 +72,9 @@ export default function ProjectDetailPage() {
           </button>
           <Link to={`/dashboard/projects/${id}/generate`} className="inline-flex items-center gap-2 border border-border px-4 py-2 rounded-lg text-sm font-medium hover:bg-muted/50">
             <Sparkles className="h-4 w-4" /> Generate Ads
+          </Link>
+          <Link to={`/dashboard/projects/${id}/audience`} className="inline-flex items-center gap-2 border border-border px-4 py-2 rounded-lg text-sm font-medium hover:bg-muted/50">
+            <Users className="h-4 w-4" /> Audience
           </Link>
           <button onClick={handleExport} disabled={exporting} className="inline-flex items-center gap-2 border border-border px-4 py-2 rounded-lg text-sm font-medium hover:bg-muted/50 disabled:opacity-50">
             {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />} Export

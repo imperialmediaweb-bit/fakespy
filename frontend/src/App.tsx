@@ -36,12 +36,14 @@ import GenerationsListPage from '@/pages/dashboard/GenerationsListPage';
 import ExportsPage from '@/pages/dashboard/ExportsPage';
 import BillingPage from '@/pages/dashboard/BillingPage';
 import SettingsPage from '@/pages/dashboard/SettingsPage';
+import AudienceBuilderPage from '@/pages/dashboard/AudienceBuilderPage';
 
 // Admin
 import AdminDashboard from '@/pages/admin/AdminDashboard';
 import AdminUsersPage from '@/pages/admin/AdminUsersPage';
 import AdminSubscriptionsPage from '@/pages/admin/AdminSubscriptionsPage';
 import { AdminProjectsPage, AdminAnalysesPage, AdminGenerationsPage, AdminExportsPage, AdminAuditLogsPage, AdminUsagePage, AdminSystemPage } from '@/pages/admin/AdminDataPage';
+import AdminBlogPage from '@/pages/admin/AdminBlogPage';
 
 import { LoadingSpinner } from '@/components/shared';
 
@@ -97,6 +99,7 @@ export default function App() {
               <Route path="projects/new" element={<NewProjectPage />} />
               <Route path="projects/:id" element={<ProjectDetailPage />} />
               <Route path="projects/:id/generate" element={<GenerateAdsPage />} />
+              <Route path="projects/:id/audience" element={<AudienceBuilderPage />} />
               <Route path="analyses" element={<AnalysesListPage />} />
               <Route path="analyses/:id" element={<AnalysisDetailPage />} />
               <Route path="generations" element={<GenerationsListPage />} />
@@ -117,6 +120,7 @@ export default function App() {
               <Route path="generations" element={<AdminGenerationsPage />} />
               <Route path="exports" element={<AdminExportsPage />} />
               <Route path="logs" element={<AdminAuditLogsPage />} />
+              <Route path="blog" element={<AdminBlogPage />} />
               <Route path="system" element={<AdminSystemPage />} />
             </Route>
 

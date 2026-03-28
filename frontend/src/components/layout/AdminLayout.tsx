@@ -1,7 +1,7 @@
 import { type ReactNode, useState } from 'react';
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { LayoutDashboard, Users, CreditCard, BarChart3, FolderOpen, Search, Sparkles, Download, ScrollText, Settings, LogOut, Menu, type LucideIcon } from 'lucide-react';
+import { LayoutDashboard, Users, CreditCard, BarChart3, FolderOpen, Search, Sparkles, Download, ScrollText, Settings, LogOut, Menu, FileText, type LucideIcon } from 'lucide-react';
 import { AdxuraLogo } from '@/components/shared/AdxuraLogo';
 
 interface NavItem { href: string; label: string; icon: LucideIcon }
@@ -43,6 +43,7 @@ export function AdminLayout({ children }: { children?: ReactNode }) {
     { href: '/admin/generations', label: 'Generations', icon: Sparkles },
     { href: '/admin/exports', label: 'Exports', icon: Download },
     { href: '/admin/logs', label: 'Audit Logs', icon: ScrollText },
+    { href: '/admin/blog', label: 'Blog', icon: FileText },
     { href: '/admin/system', label: 'System', icon: Settings },
   ];
 
