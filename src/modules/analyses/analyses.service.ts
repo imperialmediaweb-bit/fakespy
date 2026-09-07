@@ -6,6 +6,46 @@ import { usageService } from '../auth/usage.service';
 import { logger } from '../../lib/logger';
 
 export class AnalysesService {
+  /**
+   * Analyses run in-process; a restart or an AI hang can leave rows stuck in
+   * PENDING/PROCESSING. Mark anything older than `maxAgeMinutes` as FAILED and
+   * release the reserved quota so the user can retry.
+   */
+  async failStale(maxAgeMinutes = 15): Promise<number> {
+    const cutoff = new Date(Date.now() - maxAgeMinutes * 60_000);
+    const stale = await prisma.analysis.findMany({
+      where: { status: { in: ['PENDING', 'PROCESSING'] }, updatedAt: { lt: cutoff } },
+      select: { id: true, userId: true },
+    });
+    if (stale.length === 0) return 0;
+
+    await prisma.analysis.updateMany({
+      where: { id: { in: stale.map(s => s.id) } },
+      data: { status: 'FAILED', errorMessage: `Timed out after ${maxAgeMinutes} minutes` },
+    });
+    for (const s of stale) {
+      await usageService.decrementUsage(s.userId, 'analysesUsed');
+    }
+    logger.warn({ count: stale.length }, 'Marked stale analyses as FAILED');
+    return stale.length;
+  }
+
+  /** Paginated list of the user's analyses across all projects. */
+  async findAllByUser(userId: string, page: number, limit: number) {
+    const skip = (page - 1) * limit;
+    const [analyses, total] = await Promise.all([
+      prisma.analysis.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+        include: { project: { select: { id: true, title: true, brandName: true } } },
+      }),
+      prisma.analysis.count({ where: { userId } }),
+    ]);
+    return { analyses, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } };
+  }
+
   async create(userId: string, data: CreateAnalysisInput) {
     // Verify project ownership
     const project = await prisma.project.findUnique({

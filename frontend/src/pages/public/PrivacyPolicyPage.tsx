@@ -65,7 +65,7 @@ export default function PrivacyPolicyPage() {
 
           <section>
             <h2 className="text-lg font-semibold text-foreground mb-3">8. Contact</h2>
-            <p>For privacy-related inquiries, contact us at <span className="text-primary">privacy@adxura.com</span></p>
+            <p>For privacy-related inquiries, contact us at <a href="mailto:privacy@adxura.com" className="text-primary hover:underline">privacy@adxura.com</a></p>
           </section>
         </div>
       </div>

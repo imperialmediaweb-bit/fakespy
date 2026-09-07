@@ -5,8 +5,6 @@ import { prisma } from '../../lib/prisma';
 import { decrypt } from '../../utils/encryption';
 import { logger } from '../../lib/logger';
 
-type ProviderName = 'openai';
-
 async function resolveApiKey(settingKey: string, envFallback: string): Promise<string> {
   try {
     const setting = await prisma.systemSetting.findUnique({ where: { key: settingKey } });
@@ -22,16 +20,11 @@ async function resolveApiKey(settingKey: string, envFallback: string): Promise<s
   return envFallback;
 }
 
-export function getAiProvider(name?: ProviderName, apiKey?: string): AiProvider {
-  const providerName = name || 'openai';
-  switch (providerName) {
-    case 'openai':
-      return new OpenAiProvider(apiKey || config.openai.apiKey);
-    default:
-      throw new Error(`Unsupported AI provider: ${providerName}`);
-  }
-}
-
+/**
+ * Resolves the AI provider for each call: the key is read from the admin
+ * panel (system_settings) first, then the OPENAI_API_KEY env var. Not cached,
+ * so a key changed in the admin panel takes effect immediately.
+ */
 export async function getDefaultAiProvider(): Promise<AiProvider> {
   const apiKey = await resolveApiKey('OPENAI_API_KEY', config.openai.apiKey);
   return new OpenAiProvider(apiKey);

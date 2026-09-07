@@ -3,15 +3,24 @@ import { blogService } from './blog.service';
 import { authenticate, requireAdmin } from '../../middleware/auth.middleware';
 import { z } from 'zod';
 import { ValidationError } from '../../lib/errors';
+import { paginationSchema } from '../../validators/project.validators';
 
 const router = Router();
 
+const httpUrl = z.string().max(500).url().refine((u) => /^https?:\/\//i.test(u), 'Must be an http(s) URL');
+
+const adminListSchema = paginationSchema.extend({
+  status: z.enum(['DRAFT', 'SCHEDULED', 'PUBLISHED', 'ARCHIVED']).optional(),
+  categoryId: z.string().uuid().optional(),
+  search: z.string().max(200).optional(),
+});
+
 const postSchema = z.object({
   title: z.string().min(1).max(300),
-  content: z.string().min(1),
+  content: z.string().min(1).max(200_000),
   excerpt: z.string().max(500).optional(),
   categoryId: z.string().uuid().optional(),
-  featuredImage: z.string().max(500).optional(),
+  featuredImage: httpUrl.optional(),
   seoTitle: z.string().max(200).optional(),
   seoDescription: z.string().max(500).optional(),
   seoKeywords: z.string().max(300).optional(),
@@ -23,9 +32,9 @@ const postSchema = z.object({
 // ── Public routes ──
 router.get('/public', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 10;
-    const result = await blogService.getPublishedPosts(page, limit);
+    const parsed = paginationSchema.safeParse(req.query);
+    if (!parsed.success) throw new ValidationError('Invalid pagination', parsed.error.flatten().fieldErrors);
+    const result = await blogService.getPublishedPosts(parsed.data.page, parsed.data.limit);
     res.json({ success: true, data: result });
   } catch (err) { next(err); }
 });
@@ -75,12 +84,10 @@ router.delete('/tags/:id', authenticate, requireAdmin, async (req, res, next) =>
 
 router.get('/posts', authenticate, requireAdmin, async (req, res, next) => {
   try {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 20;
-    const status = req.query.status as string | undefined;
-    const categoryId = req.query.categoryId as string | undefined;
-    const search = req.query.search as string | undefined;
-    const result = await blogService.getPosts(page, limit, { status: status as any, categoryId, search });
+    const parsed = adminListSchema.safeParse(req.query);
+    if (!parsed.success) throw new ValidationError('Invalid query', parsed.error.flatten().fieldErrors);
+    const { page, limit, status, categoryId, search } = parsed.data;
+    const result = await blogService.getPosts(page, limit, { status, categoryId, search });
     res.json({ success: true, data: result });
   } catch (err) { next(err); }
 });

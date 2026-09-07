@@ -32,16 +32,20 @@ export function validateConfig(): void {
     errors.push('ENCRYPTION_KEY must be a 64-character hex string (32 bytes)');
   }
 
-  // In production, check for default/weak secrets
-  if (isProd) {
-    if (config.jwt.accessSecret.includes('change-me')) {
-      errors.push('JWT_ACCESS_SECRET appears to be the default value — change it for production');
+  // Reject placeholder secrets everywhere except the test runner. A deploy that
+  // forgets NODE_ENV=production must not silently boot with default secrets.
+  if (config.env !== 'test') {
+    if (!config.jwt.accessSecret || config.jwt.accessSecret.includes('change-me') || config.jwt.accessSecret.length < 32) {
+      errors.push('JWT_ACCESS_SECRET is missing, a placeholder, or shorter than 32 chars — generate one with: openssl rand -hex 32');
     }
-    if (config.jwt.refreshSecret.includes('change-me')) {
-      errors.push('JWT_REFRESH_SECRET appears to be the default value — change it for production');
+    if (!config.jwt.refreshSecret || config.jwt.refreshSecret.includes('change-me') || config.jwt.refreshSecret.length < 32) {
+      errors.push('JWT_REFRESH_SECRET is missing, a placeholder, or shorter than 32 chars — generate one with: openssl rand -hex 32');
+    }
+    if (config.jwt.accessSecret && config.jwt.accessSecret === config.jwt.refreshSecret) {
+      errors.push('JWT_ACCESS_SECRET and JWT_REFRESH_SECRET must be different');
     }
     if (config.encryptionKey === '0'.repeat(64)) {
-      errors.push('ENCRYPTION_KEY is all zeros — generate a real key for production');
+      errors.push('ENCRYPTION_KEY is all zeros — generate a real key with: openssl rand -hex 32');
     }
   }
 

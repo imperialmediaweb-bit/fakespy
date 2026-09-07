@@ -4,7 +4,7 @@ import {
   createGenerationSchema,
   generationIdParamSchema,
 } from '../../validators/generation.validators';
-import { projectIdParamSchema } from '../../validators/project.validators';
+import { projectIdParamSchema, paginationSchema } from '../../validators/project.validators';
 import { ValidationError } from '../../lib/errors';
 
 export class GenerationsController {
@@ -18,6 +18,19 @@ export class GenerationsController {
       const generation = await generationsService.create(req.userId!, parsed.data);
 
       res.status(201).json({ success: true, data: generation });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async findAll(req: Request, res: Response, next: NextFunction) {
+    try {
+      const pagination = paginationSchema.safeParse(req.query);
+      if (!pagination.success) {
+        throw new ValidationError('Invalid pagination', pagination.error.flatten().fieldErrors);
+      }
+      const result = await generationsService.findAllByUser(req.userId!, pagination.data.page, pagination.data.limit);
+      res.json({ success: true, data: result });
     } catch (err) {
       next(err);
     }

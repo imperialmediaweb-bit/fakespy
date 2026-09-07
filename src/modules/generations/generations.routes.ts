@@ -11,6 +11,7 @@ router.use(authenticate);
 router.post('/', aiRateLimiter, enforceLimit('generations'), (req, res, next) =>
   generationsController.create(req, res, next),
 );
+router.get('/', (req, res, next) => generationsController.findAll(req, res, next));
 router.get('/:id', (req, res, next) => generationsController.findById(req, res, next));
 
 export default router;

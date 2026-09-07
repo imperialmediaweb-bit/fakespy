@@ -2,22 +2,44 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PublicLayout } from '@/components/layout/PublicLayout';
 import { blogApi } from '@/api/newModules';
-import { LoadingSpinner, EmptyState } from '@/components/shared';
+import { getApiErrorMessage } from '@/api/client';
+import { LoadingSpinner, EmptyState, ErrorState, Pagination } from '@/components/shared';
 import { FileText, ArrowRight } from 'lucide-react';
+import type { BlogPost, Pagination as PaginationType } from '@/types/api';
+
+const fmt = (d: string, long = false) => new Date(d).toLocaleDateString('en-US', long ? { month: 'long', day: 'numeric', year: 'numeric' } : { month: 'short', day: 'numeric' });
+
+function Cover({ post, wide }: { post: BlogPost; wide?: boolean }) {
+  const ratio = wide ? 'aspect-[21/9]' : 'aspect-[16/9]';
+  // Alt is intentionally empty: the image is decorative next to the visible title.
+  return post.featuredImage ? (
+    <div className={`${ratio} overflow-hidden bg-muted`}>
+      <img src={post.featuredImage} alt="" loading={wide ? 'eager' : 'lazy'} decoding="async" width={wide ? 1200 : 640} height={wide ? 514 : 360} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+    </div>
+  ) : (
+    <div className={`${ratio} bg-gradient-to-br from-primary/10 via-primary/5 to-transparent flex items-center justify-center`}>
+      <FileText className={`${wide ? 'h-16 w-16' : 'h-10 w-10'} text-primary/20`} aria-hidden="true" />
+    </div>
+  );
+}
 
 export default function BlogPage() {
-  const [posts, setPosts] = useState<any[]>([]);
-  const [pagination, setPagination] = useState<any>(null);
+  const [posts, setPosts] = useState<BlogPost[]>([]);
+  const [pagination, setPagination] = useState<PaginationType | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [page, setPage] = useState(1);
 
-  useEffect(() => {
-    setLoading(true);
+  const load = () => {
+    setLoading(true); setError('');
     blogApi.getPublishedPosts(page, 9)
       .then(r => { setPosts(r.data.data.posts); setPagination(r.data.data.pagination); })
-      .catch(() => {})
+      .catch(err => setError(getApiErrorMessage(err, 'Could not load articles')))
       .finally(() => setLoading(false));
-  }, [page]);
+  };
+  useEffect(load, [page]);
+
+  const [featured, ...rest] = posts;
 
   return (
     <PublicLayout>
@@ -27,74 +49,53 @@ export default function BlogPage() {
           <p className="mt-3 text-muted-foreground text-lg">Insights on ad strategy, marketing intelligence, and AI-powered advertising.</p>
         </div>
 
-        {loading ? <LoadingSpinner text="Loading articles..." /> : posts.length === 0 ? (
+        {loading ? <LoadingSpinner text="Loading articles..." /> : error ? <ErrorState message={error} onRetry={load} /> : posts.length === 0 ? (
           <EmptyState icon={FileText} title="No articles yet" description="Check back soon for marketing insights and platform updates." />
         ) : (
           <>
-            {/* Featured post — first article gets a large card */}
-            {posts.length > 0 && (
-              <Link to={`/blog/${posts[0].slug}`} className="block mb-12 group">
-                <div className="rounded-2xl border border-border bg-card overflow-hidden hover:border-primary/30 transition-all hover:shadow-lg hover:shadow-primary/5">
-                  {posts[0].featuredImage ? (
-                    <div className="aspect-[21/9] overflow-hidden bg-muted">
-                      <img src={posts[0].featuredImage} alt={posts[0].title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+            {featured && page === 1 && (
+              <article className="mb-12">
+                <Link to={`/blog/${featured.slug}`} className="block group">
+                  <div className="rounded-2xl border border-border bg-card overflow-hidden hover:border-primary/30 transition-all hover:shadow-lg hover:shadow-primary/5">
+                    <Cover post={featured} wide />
+                    <div className="p-8">
+                      <div className="flex items-center gap-3 mb-3">
+                        {featured.category && <span className="text-xs font-medium text-primary bg-primary/10 px-2.5 py-1 rounded-full">{featured.category.name}</span>}
+                        <time dateTime={featured.publishedAt || featured.createdAt} className="text-xs text-muted-foreground">{fmt(featured.publishedAt || featured.createdAt, true)}</time>
+                      </div>
+                      <h2 className="text-2xl font-bold group-hover:text-primary transition-colors">{featured.title}</h2>
+                      {featured.excerpt && <p className="text-muted-foreground mt-3 text-lg leading-relaxed">{featured.excerpt}</p>}
+                      <span className="inline-flex items-center gap-1 text-sm text-primary mt-4 font-medium">Read article <ArrowRight className="h-4 w-4" aria-hidden="true" /></span>
                     </div>
-                  ) : (
-                    <div className="aspect-[21/9] bg-gradient-to-br from-primary/10 via-primary/5 to-transparent flex items-center justify-center">
-                      <FileText className="h-16 w-16 text-primary/20" />
-                    </div>
-                  )}
-                  <div className="p-8">
-                    <div className="flex items-center gap-3 mb-3">
-                      {posts[0].category && <span className="text-xs font-medium text-primary bg-primary/10 px-2.5 py-1 rounded-full">{posts[0].category.name}</span>}
-                      <span className="text-xs text-muted-foreground">{new Date(posts[0].publishedAt || posts[0].createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span>
-                    </div>
-                    <h2 className="text-2xl font-bold group-hover:text-primary transition-colors">{posts[0].title}</h2>
-                    {posts[0].excerpt && <p className="text-muted-foreground mt-3 text-lg leading-relaxed">{posts[0].excerpt}</p>}
-                    <span className="inline-flex items-center gap-1 text-sm text-primary mt-4 font-medium">Read article <ArrowRight className="h-4 w-4" /></span>
                   </div>
-                </div>
-              </Link>
+                </Link>
+              </article>
             )}
 
-            {/* Rest of posts in grid */}
-            {posts.length > 1 && (
+            {(page === 1 ? rest : posts).length > 0 && (
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {posts.slice(1).map(post => (
-                  <Link key={post.id} to={`/blog/${post.slug}`} className="group">
-                    <div className="rounded-xl border border-border bg-card overflow-hidden hover:border-primary/30 transition-all hover:shadow-lg hover:shadow-primary/5 h-full flex flex-col">
-                      {post.featuredImage ? (
-                        <div className="aspect-[16/9] overflow-hidden bg-muted">
-                          <img src={post.featuredImage} alt={post.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                {(page === 1 ? rest : posts).map(post => (
+                  <article key={post.id} className="h-full">
+                    <Link to={`/blog/${post.slug}`} className="group block h-full">
+                      <div className="rounded-xl border border-border bg-card overflow-hidden hover:border-primary/30 transition-all hover:shadow-lg hover:shadow-primary/5 h-full flex flex-col">
+                        <Cover post={post} />
+                        <div className="p-5 flex flex-col flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            {post.category && <span className="text-xs font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-full">{post.category.name}</span>}
+                            <time dateTime={post.publishedAt || post.createdAt} className="text-xs text-muted-foreground">{fmt(post.publishedAt || post.createdAt)}</time>
+                          </div>
+                          <h2 className="font-semibold group-hover:text-primary transition-colors line-clamp-2">{post.title}</h2>
+                          {post.excerpt && <p className="text-sm text-muted-foreground mt-2 line-clamp-3 flex-1">{post.excerpt}</p>}
+                          <span className="inline-flex items-center gap-1 text-xs text-primary mt-3 font-medium">Read more <ArrowRight className="h-3 w-3" aria-hidden="true" /></span>
                         </div>
-                      ) : (
-                        <div className="aspect-[16/9] bg-gradient-to-br from-primary/10 via-primary/5 to-transparent flex items-center justify-center">
-                          <FileText className="h-10 w-10 text-primary/20" />
-                        </div>
-                      )}
-                      <div className="p-5 flex flex-col flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          {post.category && <span className="text-xs font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-full">{post.category.name}</span>}
-                          <span className="text-xs text-muted-foreground">{new Date(post.publishedAt || post.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
-                        </div>
-                        <h3 className="font-semibold group-hover:text-primary transition-colors line-clamp-2">{post.title}</h3>
-                        {post.excerpt && <p className="text-sm text-muted-foreground mt-2 line-clamp-3 flex-1">{post.excerpt}</p>}
-                        <span className="inline-flex items-center gap-1 text-xs text-primary mt-3 font-medium">Read more <ArrowRight className="h-3 w-3" /></span>
                       </div>
-                    </div>
-                  </Link>
+                    </Link>
+                  </article>
                 ))}
               </div>
             )}
 
-            {/* Pagination */}
-            {pagination && pagination.totalPages > 1 && (
-              <div className="flex justify-center gap-3 mt-12">
-                <button disabled={page <= 1} onClick={() => setPage(page - 1)} className="px-5 py-2.5 text-sm border border-border rounded-lg disabled:opacity-30 hover:bg-muted/50 transition-colors">Previous</button>
-                <span className="px-4 py-2.5 text-sm text-muted-foreground">Page {page} of {pagination.totalPages}</span>
-                <button disabled={page >= pagination.totalPages} onClick={() => setPage(page + 1)} className="px-5 py-2.5 text-sm border border-border rounded-lg disabled:opacity-30 hover:bg-muted/50 transition-colors">Next</button>
-              </div>
-            )}
+            {pagination && <Pagination page={page} totalPages={pagination.totalPages} onChange={p => { setPage(p); window.scrollTo({ top: 0 }); }} />}
           </>
         )}
       </div>

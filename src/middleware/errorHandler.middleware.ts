@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { AppError, ErrorCode } from '../lib/errors';
 import { logger } from '../lib/logger';
+import { config } from '../config';
 
 export function errorHandler(err: Error, req: Request, res: Response, _next: NextFunction) {
   if (err instanceof AppError) {
@@ -60,14 +61,16 @@ export function errorHandler(err: Error, req: Request, res: Response, _next: Nex
     'Unhandled error',
   );
 
-  const isProd = process.env.NODE_ENV === 'production';
+  // Only expose internals in explicit local environments; anything else
+  // (production, staging, unset NODE_ENV) gets the safe generic response.
+  const exposeDetails = config.env === 'development' || config.env === 'test';
 
   return res.status(500).json({
     success: false,
     error: {
       code: ErrorCode.INTERNAL_ERROR,
-      message: isProd ? 'An unexpected error occurred' : err.message,
-      ...(!isProd && { stack: err.stack }),
+      message: exposeDetails ? err.message : 'An unexpected error occurred',
+      ...(exposeDetails && { stack: err.stack }),
     },
   });
 }

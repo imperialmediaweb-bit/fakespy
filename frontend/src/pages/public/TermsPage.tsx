@@ -93,7 +93,7 @@ export default function TermsPage() {
 
           <section>
             <h2 className="text-lg font-semibold text-foreground mb-3">11. Contact</h2>
-            <p>For questions about these Terms, contact us at <span className="text-primary">legal@adxura.com</span></p>
+            <p>For questions about these Terms, contact us at <a href="mailto:legal@adxura.com" className="text-primary hover:underline">legal@adxura.com</a></p>
           </section>
         </div>
       </div>

@@ -138,25 +138,32 @@ export class BillingService {
 
     logger.info({ type: event.type, id: event.id }, 'Processing Stripe webhook');
 
-    switch (event.type) {
-      case 'checkout.session.completed':
-        await this.handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session);
-        break;
+    try {
+      switch (event.type) {
+        case 'checkout.session.completed':
+          await this.handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session);
+          break;
 
-      case 'customer.subscription.updated':
-        await this.handleSubscriptionUpdated(event.data.object as Stripe.Subscription);
-        break;
+        case 'customer.subscription.updated':
+          await this.handleSubscriptionUpdated(event.data.object as Stripe.Subscription);
+          break;
 
-      case 'customer.subscription.deleted':
-        await this.handleSubscriptionDeleted(event.data.object as Stripe.Subscription);
-        break;
+        case 'customer.subscription.deleted':
+          await this.handleSubscriptionDeleted(event.data.object as Stripe.Subscription);
+          break;
 
-      case 'invoice.payment_failed':
-        await this.handlePaymentFailed(event.data.object as Stripe.Invoice);
-        break;
+        case 'invoice.payment_failed':
+          await this.handlePaymentFailed(event.data.object as Stripe.Invoice);
+          break;
 
-      default:
-        logger.info({ type: event.type }, 'Unhandled Stripe event type');
+        default:
+          logger.info({ type: event.type }, 'Unhandled Stripe event type');
+      }
+    } catch (err) {
+      // Release the idempotency claim so Stripe's retry of this event is
+      // processed instead of being discarded as a duplicate.
+      await redis.del(idempotencyKey).catch(() => undefined);
+      throw err;
     }
   }
 

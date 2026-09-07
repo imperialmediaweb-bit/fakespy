@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { config } from '../config';
+import { prisma } from '../lib/prisma';
 import { UnauthorizedError, ForbiddenError } from '../lib/errors';
 
 interface JwtPayload {
@@ -31,9 +32,23 @@ export function authenticate(req: Request, _res: Response, next: NextFunction) {
   }
 }
 
+/**
+ * Requires ADMIN role. The JWT claim is checked first (cheap), then the role is
+ * re-read from the database so a demoted or deleted admin loses access
+ * immediately rather than for the remaining lifetime of their access token.
+ */
 export function requireAdmin(req: Request, _res: Response, next: NextFunction) {
-  if (req.userRole !== 'ADMIN') {
+  if (req.userRole !== 'ADMIN' || !req.userId) {
     return next(new ForbiddenError('Admin access required'));
   }
-  next();
+
+  prisma.user
+    .findUnique({ where: { id: req.userId }, select: { role: true } })
+    .then((user) => {
+      if (!user || user.role !== 'ADMIN') {
+        return next(new ForbiddenError('Admin access required'));
+      }
+      next();
+    })
+    .catch(next);
 }

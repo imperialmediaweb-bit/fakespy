@@ -1,7 +1,8 @@
 import { prisma } from '../../lib/prisma';
 import { getDefaultAiProvider } from '../../providers/ai/ai.factory';
-import { NotFoundError } from '../../lib/errors';
+import { NotFoundError, ForbiddenError } from '../../lib/errors';
 import { logger } from '../../lib/logger';
+import { usageService } from '../auth/usage.service';
 
 const SCORING_SYSTEM_PROMPT = `You are an expert advertising analyst. You score ads on 4 dimensions (1-100 each).
 Respond ONLY with valid JSON:
@@ -23,13 +24,18 @@ Scoring criteria:
 - suggestions: 3-5 specific, actionable improvements.`;
 
 export class AdScoreService {
-  async scoreGeneration(generationId: string) {
+  async scoreGeneration(userId: string, generationId: string) {
     const generation = await prisma.adGeneration.findUnique({ where: { id: generationId } });
     if (!generation) throw new NotFoundError('Ad generation');
+    if (generation.userId !== userId) throw new ForbiddenError('Access denied');
 
-    // Check if already scored
+    // Already scored: return cached result and release the quota the middleware reserved,
+    // since no AI call is made.
     const existing = await prisma.adScore.findUnique({ where: { generationId } });
-    if (existing) return existing;
+    if (existing) {
+      await usageService.decrementUsage(userId, 'generationsUsed');
+      return existing;
+    }
 
     const adContent = JSON.stringify(generation.output, null, 2);
     const userPrompt = `Score this ${generation.type.replace(/_/g, ' ')} ad:\n\n${adContent}\n\nContext:\n- Tone: ${generation.tone || 'not specified'}\n- Audience: ${generation.audience || 'not specified'}\n- Objective: ${generation.objective || 'not specified'}`;
@@ -66,7 +72,10 @@ export class AdScoreService {
     });
   }
 
-  async getScore(generationId: string) {
+  async getScore(userId: string, generationId: string) {
+    const generation = await prisma.adGeneration.findUnique({ where: { id: generationId }, select: { userId: true } });
+    if (!generation) throw new NotFoundError('Ad generation');
+    if (generation.userId !== userId) throw new ForbiddenError('Access denied');
     return prisma.adScore.findUnique({ where: { generationId } });
   }
 }

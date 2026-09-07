@@ -13,6 +13,11 @@ import { getEmailProvider } from '../../providers/email/email.factory';
 
 const SALT_ROUNDS = 12;
 
+/** SHA-256 hex digest used to store refresh tokens at rest. */
+export function hashToken(token: string): string {
+  return crypto.createHash('sha256').update(token).digest('hex');
+}
+
 interface TokenPair {
   accessToken: string;
   refreshToken: string;
@@ -131,7 +136,8 @@ export class AuthService {
       select: { id: true, role: true, refreshToken: true },
     });
 
-    if (!user || user.refreshToken !== refreshToken) {
+    // Only a hash is stored, so a leaked DB row cannot be replayed as a session.
+    if (!user || !user.refreshToken || user.refreshToken !== hashToken(refreshToken)) {
       throw new UnauthorizedError('Invalid refresh token');
     }
 
@@ -256,10 +262,10 @@ export class AuthService {
       expiresIn: config.jwt.refreshExpiry as string & { __brand: 'StringValue' },
     } as jwt.SignOptions);
 
-    // Store refresh token hash in DB for validation
+    // Store only a hash of the refresh token for validation
     await prisma.user.update({
       where: { id: userId },
-      data: { refreshToken },
+      data: { refreshToken: hashToken(refreshToken) },
     });
 
     return { accessToken, refreshToken };

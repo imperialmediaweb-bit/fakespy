@@ -4,6 +4,7 @@ import { validateConfig } from './config/validate';
 import { connectDatabase, disconnectDatabase } from './lib/prisma';
 import { disconnectRedis } from './lib/redis';
 import { logger } from './lib/logger';
+import { analysesService } from './modules/analyses/analyses.service';
 
 async function main() {
   validateConfig();
@@ -11,6 +12,13 @@ async function main() {
   const app = createApp();
 
   await connectDatabase();
+
+  // Recover analyses stranded by a previous restart, then keep sweeping.
+  await analysesService.failStale().catch((err) => logger.error({ err }, 'Stale analysis sweep failed'));
+  const sweeper = setInterval(() => {
+    analysesService.failStale().catch((err) => logger.error({ err }, 'Stale analysis sweep failed'));
+  }, 5 * 60_000);
+  sweeper.unref();
 
   const server = app.listen(config.port, '0.0.0.0', () => {
     logger.info(

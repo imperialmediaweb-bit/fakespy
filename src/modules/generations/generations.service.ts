@@ -3,11 +3,27 @@ import { NotFoundError, ForbiddenError } from '../../lib/errors';
 import { CreateGenerationInput } from '../../validators/generation.validators';
 import { getDefaultAiProvider } from '../../providers/ai/ai.factory';
 import { getPromptBuilder } from './prompt-builders';
-
+import { usageService } from '../auth/usage.service';
 import { logger } from '../../lib/logger';
 import { GenerationType } from '@prisma/client';
 
 export class GenerationsService {
+  /** Paginated list of the user's generations across all projects. */
+  async findAllByUser(userId: string, page: number, limit: number) {
+    const skip = (page - 1) * limit;
+    const [generations, total] = await Promise.all([
+      prisma.adGeneration.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+        include: { project: { select: { id: true, title: true, brandName: true } }, adScore: { select: { overallScore: true } } },
+      }),
+      prisma.adGeneration.count({ where: { userId } }),
+    ]);
+    return { generations, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } };
+  }
+
   async create(userId: string, data: CreateGenerationInput) {
     // Verify project ownership
     const project = await prisma.project.findUnique({
@@ -55,13 +71,20 @@ export class GenerationsService {
 
     const aiProvider = await getDefaultAiProvider();
 
-    const result = await aiProvider.complete({
-      systemPrompt,
-      userPrompt,
-      temperature: 0.8,
-      maxTokens: 4096,
-      responseFormat: 'json',
-    });
+    let result;
+    try {
+      result = await aiProvider.complete({
+        systemPrompt,
+        userPrompt,
+        temperature: 0.8,
+        maxTokens: 4096,
+        responseFormat: 'json',
+      });
+    } catch (err) {
+      // The middleware reserved a generation credit; give it back on AI failure.
+      await usageService.decrementUsage(userId, 'generationsUsed');
+      throw err;
+    }
 
     let output: Record<string, unknown>;
     try {

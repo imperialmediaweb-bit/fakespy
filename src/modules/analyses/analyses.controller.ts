@@ -4,7 +4,7 @@ import {
   createAnalysisSchema,
   analysisIdParamSchema,
 } from '../../validators/analysis.validators';
-import { projectIdParamSchema } from '../../validators/project.validators';
+import { projectIdParamSchema, paginationSchema } from '../../validators/project.validators';
 import { ValidationError } from '../../lib/errors';
 
 export class AnalysesController {
@@ -22,6 +22,19 @@ export class AnalysesController {
         data: analysis,
         message: 'Analysis started. Poll the analysis endpoint for results.',
       });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async findAll(req: Request, res: Response, next: NextFunction) {
+    try {
+      const pagination = paginationSchema.safeParse(req.query);
+      if (!pagination.success) {
+        throw new ValidationError('Invalid pagination', pagination.error.flatten().fieldErrors);
+      }
+      const result = await analysesService.findAllByUser(req.userId!, pagination.data.page, pagination.data.limit);
+      res.json({ success: true, data: result });
     } catch (err) {
       next(err);
     }

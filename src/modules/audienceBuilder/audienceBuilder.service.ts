@@ -2,6 +2,7 @@ import { prisma } from '../../lib/prisma';
 import { getDefaultAiProvider } from '../../providers/ai/ai.factory';
 import { NotFoundError, ForbiddenError } from '../../lib/errors';
 import { logger } from '../../lib/logger';
+import { usageService } from '../auth/usage.service';
 
 const SYSTEM_PROMPT = `You are an expert audience research strategist. You create detailed ideal customer profiles for ad targeting.
 Respond ONLY with valid JSON:
@@ -31,7 +32,14 @@ ${project.competitors?.length ? `Competitors: ${project.competitors.join(', ')}`
 Profile Name: ${name}`;
 
     const aiProvider = await getDefaultAiProvider();
-    const result = await aiProvider.complete({ systemPrompt: SYSTEM_PROMPT, userPrompt, temperature: 0.7, maxTokens: 2048, responseFormat: 'json' });
+    let result;
+    try {
+      result = await aiProvider.complete({ systemPrompt: SYSTEM_PROMPT, userPrompt, temperature: 0.7, maxTokens: 2048, responseFormat: 'json' });
+    } catch (err) {
+      // Release the generation credit reserved by the middleware.
+      await usageService.decrementUsage(userId, 'generationsUsed');
+      throw err;
+    }
 
     let parsed: any;
     try { parsed = JSON.parse(result.content); } catch { logger.error('Failed to parse audience profile'); parsed = { avatar: {}, painPoints: [], desires: [], objections: [], buyingTriggers: [], demographics: {}, interests: [] }; }

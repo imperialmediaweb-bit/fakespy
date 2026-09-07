@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { raw } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
@@ -8,10 +8,9 @@ import { config } from './config';
 import { globalRateLimiter } from './middleware/rateLimiter.middleware';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.middleware';
 
-import { authenticate } from './middleware/auth.middleware';
-
 // Routes
 import healthRoutes from './modules/health/health.routes';
+import seoRoutes from './modules/seo/seo.routes';
 import authRoutes from './modules/auth/auth.routes';
 import projectsRoutes from './modules/projects/projects.routes';
 import analysesRoutes from './modules/analyses/analyses.routes';
@@ -24,14 +23,29 @@ import blogRoutes from './modules/blog/blog.routes';
 import adScoreRoutes from './modules/adScore/adScore.routes';
 import audienceBuilderRoutes from './modules/audienceBuilder/audienceBuilder.routes';
 import adVariationsRoutes from './modules/adVariations/adVariations.routes';
-import { analysesController } from './modules/analyses/analyses.controller';
-import { generationsController } from './modules/generations/generations.controller';
+import contactRoutes from './modules/contact/contact.routes';
+import { billingController } from './modules/billing/billing.controller';
 
 export function createApp() {
   const app = express();
 
+  // Behind Railway/any reverse proxy: needed so rate limiting keys on the real
+  // client IP (X-Forwarded-For) instead of the proxy's address.
+  app.set('trust proxy', 1);
+
   // Security
-  app.use(helmet());
+  // Helmet's default CSP only allows same-origin images, which blocks blog
+  // featured images hosted elsewhere. Everything else stays locked down.
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+          'img-src': ["'self'", 'data:', 'https:'],
+        },
+      },
+    }),
+  );
   app.use(
     cors({
       origin: config.frontendUrl,
@@ -41,27 +55,31 @@ export function createApp() {
     }),
   );
 
-  // Rate limiting
-  app.use(globalRateLimiter);
-
   // Request logging
   if (config.env !== 'test') {
     app.use(morgan('short'));
   }
 
-  // Body parsing - billing webhook needs raw body, so register it before json parser
-  // Billing routes handle their own body parsing for webhook
-  app.use(`${config.apiPrefix}/billing`, billingRoutes);
+  // Stripe webhook needs the raw body for signature verification, so it is
+  // registered before the JSON parser and outside the global rate limiter
+  // (a throttled webhook would drop paid upgrades).
+  app.post(`${config.apiPrefix}/billing/webhook`, raw({ type: 'application/json' }), (req, res, next) =>
+    billingController.webhook(req, res, next),
+  );
 
-  // Standard body parsing for all other routes
+  // Global API rate limit — API only, so page loads / static assets are unaffected.
+  app.use(config.apiPrefix, globalRateLimiter);
+
+  // Body parsing for all other routes
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
   // Compression
   app.use(compression());
 
-  // Health routes (no prefix)
+  // Health + SEO routes (no prefix)
   app.use('/', healthRoutes);
+  app.use('/', seoRoutes);
 
   // API routes
   app.use(`${config.apiPrefix}/auth`, authRoutes);
@@ -69,25 +87,14 @@ export function createApp() {
   app.use(`${config.apiPrefix}/analyses`, analysesRoutes);
   app.use(`${config.apiPrefix}/generations`, generationsRoutes);
   app.use(`${config.apiPrefix}/exports`, exportsRoutes);
+  app.use(`${config.apiPrefix}/billing`, billingRoutes);
   app.use(`${config.apiPrefix}/settings`, settingsRoutes);
   app.use(`${config.apiPrefix}/admin`, adminRoutes);
   app.use(`${config.apiPrefix}/blog`, blogRoutes);
   app.use(`${config.apiPrefix}/ad-scores`, adScoreRoutes);
   app.use(`${config.apiPrefix}/audience`, audienceBuilderRoutes);
   app.use(`${config.apiPrefix}/variations`, adVariationsRoutes);
-
-  // Project-scoped sub-routes
-  app.get(
-    `${config.apiPrefix}/projects/:id/analyses`,
-    authenticate as express.RequestHandler,
-    (req, res, next) => analysesController.findByProject(req, res, next),
-  );
-
-  app.get(
-    `${config.apiPrefix}/projects/:id/generations`,
-    authenticate as express.RequestHandler,
-    (req, res, next) => generationsController.findByProject(req, res, next),
-  );
+  app.use(`${config.apiPrefix}/contact`, contactRoutes);
 
   // Serve frontend static files in production
   const frontendPath = path.join(__dirname, '..', 'frontend-dist');

@@ -2,6 +2,7 @@ import { prisma } from '../../lib/prisma';
 import { getDefaultAiProvider } from '../../providers/ai/ai.factory';
 import { NotFoundError, ForbiddenError } from '../../lib/errors';
 import { logger } from '../../lib/logger';
+import { usageService } from '../auth/usage.service';
 
 const VARIATION_STYLES = ['short', 'emotional', 'direct_response', 'premium', 'urgency'] as const;
 type VariationStyle = typeof VARIATION_STYLES[number];
@@ -44,17 +45,34 @@ export class AdVariationsService {
     });
   }
 
-  async listByGeneration(generationId: string) {
+  async listByGeneration(userId: string, generationId: string) {
+    const generation = await prisma.adGeneration.findUnique({ where: { id: generationId }, select: { userId: true } });
+    if (!generation) throw new NotFoundError('Ad generation');
+    if (generation.userId !== userId) throw new ForbiddenError('Access denied');
     return prisma.adVariation.findMany({ where: { generationId }, orderBy: { createdAt: 'desc' } });
   }
 
+  /**
+   * Generates every style that does not exist yet. Each AI call reserves one
+   * unit of generation quota; if the plan runs out mid-way, the variations
+   * already produced are kept and PlanLimitError is thrown for the rest.
+   */
   async generateAll(userId: string, generationId: string) {
+    const generation = await prisma.adGeneration.findUnique({ where: { id: generationId }, select: { userId: true } });
+    if (!generation) throw new NotFoundError('Ad generation');
+    if (generation.userId !== userId) throw new ForbiddenError('Access denied');
+
     const results = [];
     for (const style of VARIATION_STYLES) {
       const existing = await prisma.adVariation.findFirst({ where: { generationId, style } });
       if (existing) { results.push(existing); continue; }
-      const variation = await this.generateVariation(userId, generationId, style);
-      results.push(variation);
+      await usageService.reserveQuota(userId, 'generations');
+      try {
+        results.push(await this.generateVariation(userId, generationId, style));
+      } catch (err) {
+        await usageService.decrementUsage(userId, 'generationsUsed');
+        throw err;
+      }
     }
     return results;
   }

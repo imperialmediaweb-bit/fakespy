@@ -1,7 +1,5 @@
 @import "tailwindcss";
 
-@custom-variant dark (&:is(.dark *));
-
 @theme {
   --color-background: hsl(224 71% 4%);
   --color-foreground: hsl(213 31% 91%);
@@ -27,14 +25,23 @@
   --radius: 0.5rem;
 }
 
-* {
-  border-color: var(--color-border);
-}
+@layer base {
+  html {
+    color-scheme: dark;
+  }
 
-body {
-  background-color: var(--color-background);
-  color: var(--color-foreground);
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Visible keyboard focus for every interactive element; mouse clicks don't trigger it. */
+  :where(button, a, [role="button"], [role="tab"], input, select, textarea, summary):focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
+    border-radius: var(--radius);
+  }
 }

@@ -191,3 +191,14 @@ See `.env.example` for all required and optional environment variables.
 | `npm run prisma:migrate` | Run migrations |
 | `npm run prisma:seed` | Seed database |
 | `npm run prisma:studio` | Open Prisma Studio |
+
+## Demo accounts & seeding (production)
+
+`GET|POST /seed?secret=<SEED_SECRET>` creates the demo accounts. It is **disabled unless `SEED_SECRET` is set** (use a random string, never the JWT secret).
+
+- The admin password is taken from `SEED_ADMIN_PASSWORD`, or generated and returned once in the response. Re-running the seed rotates it.
+- Demo users (`demo@`, `pro@`, `agency@adxura.com`) are USER-role, quota-limited accounts intended for evaluation.
+
+## SEO
+
+- `robots.txt` is served from the frontend build; `sitemap.xml` is generated dynamically (marketing pages + published blog posts) and uses `FRONTEND_URL` as the canonical origin — set it to your public domain.

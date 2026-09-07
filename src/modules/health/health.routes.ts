@@ -1,6 +1,8 @@
 import { Router, Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 import { prisma } from '../../lib/prisma';
+import { logger } from '../../lib/logger';
 
 const router = Router();
 
@@ -29,10 +31,23 @@ router.get('/ready', async (_req: Request, res: Response) => {
   }
 });
 
-// One-time seed endpoint for demo accounts
+/**
+ * One-time seed endpoint for demo accounts.
+ * Guarded by a dedicated SEED_SECRET (never the JWT signing secret — a URL
+ * query param ends up in access logs, and leaking the JWT secret would allow
+ * forging tokens for any account). If SEED_SECRET is unset, the endpoint is
+ * disabled entirely.
+ */
 router.all('/seed', async (req: Request, res: Response) => {
-  const secret = req.headers['x-seed-secret'] || req.query.secret;
-  if (secret !== process.env.JWT_ACCESS_SECRET) {
+  const configured = process.env.SEED_SECRET;
+  const provided = (req.headers['x-seed-secret'] as string | undefined) || (req.query.secret as string | undefined);
+
+  if (!configured) {
+    return res.status(404).json({ error: 'Seed endpoint disabled. Set SEED_SECRET to enable.' });
+  }
+  const a = Buffer.from(String(provided || ''));
+  const b = Buffer.from(configured);
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
     return res.status(403).json({ error: 'Forbidden' });
   }
 
@@ -41,8 +56,14 @@ router.all('/seed', async (req: Request, res: Response) => {
     const monthKey = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
     const hash = async (pw: string) => bcrypt.hash(pw, 12);
 
+    // The admin password is never a published constant: it comes from
+    // SEED_ADMIN_PASSWORD or is generated and returned exactly once. Re-running
+    // the seed rotates the admin password; demo (USER-role) accounts keep theirs.
+    const generatedAdminPassword = process.env.SEED_ADMIN_PASSWORD ? undefined : crypto.randomBytes(12).toString('base64url');
+    const adminPassword = process.env.SEED_ADMIN_PASSWORD || generatedAdminPassword!;
+
     const accounts = [
-      { email: 'admin@adxura.com', name: 'Admin', password: 'Admin123!', role: 'ADMIN' as const, plan: 'AGENCY' as const, usage: { analysesUsed: 12, generationsUsed: 45, exportsUsed: 8 } },
+      { email: 'admin@adxura.com', name: 'Admin', password: adminPassword, role: 'ADMIN' as const, plan: 'AGENCY' as const, usage: { analysesUsed: 12, generationsUsed: 45, exportsUsed: 8 } },
       { email: 'demo@adxura.com', name: 'Demo User', password: 'Demo123!', role: 'USER' as const, plan: 'FREE' as const, usage: { analysesUsed: 1, generationsUsed: 3, exportsUsed: 0 } },
       { email: 'pro@adxura.com', name: 'Sarah Mitchell', password: 'Pro12345!', role: 'USER' as const, plan: 'PRO' as const, usage: { analysesUsed: 8, generationsUsed: 32, exportsUsed: 5 } },
       { email: 'agency@adxura.com', name: 'Alex Rivera', password: 'Agency123!', role: 'USER' as const, plan: 'AGENCY' as const, usage: { analysesUsed: 47, generationsUsed: 189, exportsUsed: 22 } },
@@ -50,13 +71,14 @@ router.all('/seed', async (req: Request, res: Response) => {
 
     const created = [];
     for (const acc of accounts) {
+      const passwordHash = await hash(acc.password);
       const user = await prisma.user.upsert({
         where: { email: acc.email },
-        update: {},
+        update: acc.role === 'ADMIN' ? { passwordHash, role: 'ADMIN' } : {},
         create: {
           name: acc.name,
           email: acc.email,
-          passwordHash: await hash(acc.password),
+          passwordHash,
           role: acc.role,
           emailVerified: true,
           subscription: { create: { plan: acc.plan, status: 'ACTIVE' } },
@@ -106,9 +128,18 @@ router.all('/seed', async (req: Request, res: Response) => {
       }
     }
 
-    res.json({ success: true, message: 'Seed complete', accounts: created });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    res.json({
+      success: true,
+      message: 'Seed complete',
+      accounts: created,
+      ...(generatedAdminPassword && {
+        adminPassword: generatedAdminPassword,
+        note: 'Store this admin password now — it is shown only once. Set SEED_ADMIN_PASSWORD to choose it yourself.',
+      }),
+    });
+  } catch (err) {
+    logger.error({ err }, 'Seed failed');
+    res.status(500).json({ error: 'Seed failed' });
   }
 });
 

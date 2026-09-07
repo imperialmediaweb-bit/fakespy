@@ -1,5 +1,6 @@
 import { prisma } from '../../lib/prisma';
 import { encrypt, decrypt } from '../../utils/encryption';
+import { ValidationError } from '../../lib/errors';
 
 export interface ProviderConfig {
   key: string;
@@ -67,23 +68,6 @@ export class SystemSettingsService {
     }));
   }
 
-  async getByCategory(category: string) {
-    const settings = await prisma.systemSetting.findMany({
-      where: { category },
-      orderBy: { key: 'asc' },
-    });
-
-    return settings.map(s => ({
-      id: s.id,
-      key: s.key,
-      value: s.encrypted ? this.maskValue(s.value) : s.value,
-      hasValue: s.value.length > 0,
-      encrypted: s.encrypted,
-      category: s.category,
-      label: s.label,
-    }));
-  }
-
   async upsert(key: string, value: string): Promise<void> {
     const config = PROVIDER_CONFIGS.find(c => c.key === key);
     if (!config) throw new Error(`Unknown setting: ${key}`);
@@ -108,6 +92,7 @@ export class SystemSettingsService {
   }
 
   async delete(key: string): Promise<void> {
+    if (!PROVIDER_CONFIGS.some(c => c.key === key)) throw new ValidationError(`Unknown setting: ${key}`);
     await prisma.systemSetting.deleteMany({ where: { key } });
   }
 
@@ -136,14 +121,9 @@ export class SystemSettingsService {
     return categories;
   }
 
-  private maskValue(encryptedValue: string): string {
-    try {
-      const decrypted = decrypt(encryptedValue);
-      if (decrypted.length <= 8) return '••••••••';
-      return decrypted.slice(0, 4) + '••••' + decrypted.slice(-4);
-    } catch {
-      return '••••••••';
-    }
+  /** Secrets are never partially revealed — the UI only needs to know a value exists. */
+  private maskValue(_encryptedValue: string): string {
+    return '••••••••';
   }
 }
 

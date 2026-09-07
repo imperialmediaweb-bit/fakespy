@@ -12,7 +12,16 @@ vi.mock('../../src/config', () => ({
   },
 }));
 
+const mockPrisma = vi.hoisted(() => ({
+  user: { findUnique: vi.fn() },
+}));
+vi.mock('../../src/lib/prisma', () => ({ prisma: mockPrisma }));
+
 import { authenticate, requireAdmin } from '../../src/middleware/auth.middleware';
+
+/** requireAdmin resolves asynchronously; wait for next() to be invoked. */
+const nextCalled = (fn: ReturnType<typeof vi.fn>) =>
+  vi.waitFor(() => { expect(fn).toHaveBeenCalled(); });
 
 describe('Auth Middleware', () => {
   const mockRes = {} as Response;
@@ -64,22 +73,34 @@ describe('Auth Middleware', () => {
   });
 
   describe('requireAdmin', () => {
-    it('should reject non-admin users', () => {
-      const req = { userRole: 'USER' } as Request;
+    it('should reject non-admin users without hitting the database', async () => {
+      const req = { userId: 'user-1', userRole: 'USER' } as Request;
 
       requireAdmin(req, mockRes, mockNext);
+      await nextCalled(mockNext as ReturnType<typeof vi.fn>);
 
-      expect(mockNext).toHaveBeenCalledWith(
-        expect.objectContaining({ statusCode: 403 }),
-      );
+      expect(mockNext).toHaveBeenCalledWith(expect.objectContaining({ statusCode: 403 }));
+      expect(mockPrisma.user.findUnique).not.toHaveBeenCalled();
     });
 
-    it('should allow admin users', () => {
-      const req = { userRole: 'ADMIN' } as Request;
+    it('should allow admin users whose DB role is still ADMIN', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({ role: 'ADMIN' });
+      const req = { userId: 'admin-1', userRole: 'ADMIN' } as Request;
 
       requireAdmin(req, mockRes, mockNext);
+      await nextCalled(mockNext as ReturnType<typeof vi.fn>);
 
       expect(mockNext).toHaveBeenCalledWith();
+    });
+
+    it('should reject a token with ADMIN claim when the user was demoted', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({ role: 'USER' });
+      const req = { userId: 'admin-1', userRole: 'ADMIN' } as Request;
+
+      requireAdmin(req, mockRes, mockNext);
+      await nextCalled(mockNext as ReturnType<typeof vi.fn>);
+
+      expect(mockNext).toHaveBeenCalledWith(expect.objectContaining({ statusCode: 403 }));
     });
   });
 });

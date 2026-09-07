@@ -33,7 +33,7 @@ vi.mock('../../src/lib/logger', () => ({
   },
 }));
 
-import { AuthService } from '../../src/modules/auth/auth.service';
+import { AuthService, hashToken } from '../../src/modules/auth/auth.service';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -188,10 +188,11 @@ describe('AuthService', () => {
         { expiresIn: '7d' } as jwt.SignOptions,
       );
 
+      // The service stores only a SHA-256 hash of the refresh token.
       mockPrisma.user.findUnique.mockResolvedValue({
         id: 'user-1',
         role: 'USER',
-        refreshToken: token,
+        refreshToken: hashToken(token),
       });
       mockPrisma.user.update.mockResolvedValue({});
 
