@@ -30,7 +30,7 @@ ${project.productDescription ? `Product: ${project.productDescription}` : ''}
 ${project.competitors?.length ? `Competitors: ${project.competitors.join(', ')}` : ''}
 Profile Name: ${name}`;
 
-    const aiProvider = getDefaultAiProvider();
+    const aiProvider = await getDefaultAiProvider();
     const result = await aiProvider.complete({ systemPrompt: SYSTEM_PROMPT, userPrompt, temperature: 0.7, maxTokens: 2048, responseFormat: 'json' });
 
     let parsed: any;

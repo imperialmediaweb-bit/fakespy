@@ -22,6 +22,11 @@ export function validateConfig(): void {
     warnings.push('SMTP not configured — emails will be logged to console instead of sent');
   }
 
+  // OpenAI key can come from env OR admin panel (system_settings table)
+  if (!config.openai.apiKey || config.openai.apiKey.includes('placeholder')) {
+    warnings.push('OPENAI_API_KEY not set in env — AI features require a key set in Admin → System Settings');
+  }
+
   // Encryption key must be exactly 64 hex chars
   if (config.encryptionKey.length !== 64 || !/^[0-9a-fA-F]+$/.test(config.encryptionKey)) {
     errors.push('ENCRYPTION_KEY must be a 64-character hex string (32 bytes)');

@@ -27,7 +27,7 @@ export class AdVariationsService {
     const originalContent = JSON.stringify(generation.output, null, 2);
     const stylePrompt = STYLE_PROMPTS[style as VariationStyle];
 
-    const aiProvider = getDefaultAiProvider();
+    const aiProvider = await getDefaultAiProvider();
     const result = await aiProvider.complete({
       systemPrompt: `You are an expert ad copywriter. You create variations of existing ads. Respond with valid JSON matching the same structure as the original.`,
       userPrompt: `Original ${generation.type.replace(/_/g, ' ')} ad:\n${originalContent}\n\nInstruction: ${stylePrompt}\n\nRespond with the same JSON structure but rewritten in the requested style.`,

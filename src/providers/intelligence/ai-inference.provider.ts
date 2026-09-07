@@ -65,7 +65,7 @@ export class AiInferenceProvider implements IntelligenceProvider {
   readonly name = 'ai_inference';
 
   async analyze(input: IntelligenceInput): Promise<IntelligenceResult> {
-    const aiProvider = getDefaultAiProvider();
+    const aiProvider = await getDefaultAiProvider();
 
     const result = await aiProvider.complete({
       systemPrompt: SYSTEM_PROMPT,

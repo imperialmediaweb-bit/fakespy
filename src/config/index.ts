@@ -44,7 +44,7 @@ export const config = {
   },
 
   openai: {
-    apiKey: required('OPENAI_API_KEY'),
+    apiKey: optional('OPENAI_API_KEY', ''),
   },
 
   frontendUrl: optional('FRONTEND_URL', 'http://localhost:5173'),

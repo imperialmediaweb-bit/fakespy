@@ -34,7 +34,7 @@ export class AdScoreService {
     const adContent = JSON.stringify(generation.output, null, 2);
     const userPrompt = `Score this ${generation.type.replace(/_/g, ' ')} ad:\n\n${adContent}\n\nContext:\n- Tone: ${generation.tone || 'not specified'}\n- Audience: ${generation.audience || 'not specified'}\n- Objective: ${generation.objective || 'not specified'}`;
 
-    const aiProvider = getDefaultAiProvider();
+    const aiProvider = await getDefaultAiProvider();
     const result = await aiProvider.complete({
       systemPrompt: SCORING_SYSTEM_PROMPT,
       userPrompt,

@@ -53,7 +53,7 @@ export class GenerationsService {
       userPrompt,
     };
 
-    const aiProvider = getDefaultAiProvider();
+    const aiProvider = await getDefaultAiProvider();
 
     const result = await aiProvider.complete({
       systemPrompt,
